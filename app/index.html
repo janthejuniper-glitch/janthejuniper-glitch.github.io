@@ -140,12 +140,13 @@ function leerEnlace(texto) {
   return h.get('k') && h.get('u') && /^https:\/\/script\.google\.com\//.test(h.get('u')) ? { k: h.get('k'), u: h.get('u') } : null;
 }
 (function () {
-  const c = leerEnlace(location.href);
-  if (c) {
+  const c = leerEnlace(location.href), previa = leerLS('cj_cfg', null);
+  // en Safari un enlace recién abierto manda; en la app instalada, el enlace guardado del icono solo sirve la primera vez
+  if (c && (!INSTALADA || !previa)) {
     guardarLS('cj_cfg', c);
-    if (INSTALADA) history.replaceState(null, '', location.pathname);
-    else { const m = document.querySelector('link[rel="manifest"]'); if (m) m.remove(); }
+    if (!INSTALADA) { const m = document.querySelector('link[rel="manifest"]'); if (m) m.remove(); }
   }
+  if (c && INSTALADA) history.replaceState(null, '', location.pathname);
 })();
 let CFG = leerLS('cj_cfg', null);
 
@@ -396,16 +397,15 @@ function toast(msg, deshacer) {
 
 function pintar() {
   const app = $('#app');
-  if (!CFG) {
+  if (!CFG || S.estado === 'clave') {
     $('#tabs').hidden = true;
-    app.innerHTML = `<div class="bienvenida"><div><img src="../icon-192.png" alt=""><h1>Conecta tu centro</h1>
-      <p>Abre el enlace que te mandó tu bot de Telegram (@JanTheJuniper_Bot)${INSTALADA ? ', o cópialo y pégalo aquí:' : '.'}</p>
-      ${INSTALADA ? `<form class="nueva" id="fenlace" style="margin-top:16px"><input class="inp" name="enlace" placeholder="Pega aquí el enlace" autocomplete="off"><button class="btn pri" type="submit">Conectar</button></form>` : ''}</div></div>`;
+    app.innerHTML = `<div class="bienvenida"><div><img src="../icon-192.png" alt=""><h1>${CFG ? 'Hay que reconectar' : 'Conecta tu centro'}</h1>
+      <p>${CFG ? 'La clave de la app ha cambiado. ' : ''}Abre el último enlace que te mandó tu bot de Telegram (@JanTheJuniper_Bot)${INSTALADA || CFG ? ', o cópialo y pégalo aquí:' : '.'}</p>
+      ${INSTALADA || CFG ? `<form class="nueva" id="fenlace" style="margin-top:16px"><input class="inp" name="enlace" placeholder="Pega aquí el enlace" autocomplete="off"><button class="btn pri" type="submit">Conectar</button></form>` : ''}</div></div>`;
     const f = $('#fenlace');
-    if (f) f.onsubmit = (e) => { e.preventDefault(); const c = leerEnlace(new FormData(f).get('enlace')); if (!c) { toast('Ese enlace no es el del bot'); return; } guardarLS('cj_cfg', c); CFG = c; pintar(); sincronizar(); };
+    if (f) f.onsubmit = (e) => { e.preventDefault(); const c = leerEnlace(new FormData(f).get('enlace')); if (!c) { toast('Ese enlace no es el del bot'); return; } guardarLS('cj_cfg', c); CFG = c; S.estado = 'cargando'; pintar(); sincronizar(); };
     return;
   }
-  if (S.estado === 'clave') { $('#tabs').hidden = true; app.innerHTML = `<div class="bienvenida"><div><img src="../icon-192.png" alt=""><h1>Hay que reconectar</h1><p>La clave de la app ha cambiado. Abre el último enlace que te mandó el bot de Telegram.</p></div></div>`; return; }
   if (!S.doc) { $('#tabs').hidden = true; app.innerHTML = `<div class="bienvenida"><div><img src="../icon-192.png" alt=""><h1>Cargando tu centro…</h1><p>${S.estado === 'off' ? 'Sin conexión: en cuanto vuelva la red aparece todo.' : 'Un momento.'}</p></div></div>`; return; }
   $('#tabs').hidden = false;
   document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.v === S.vista));
