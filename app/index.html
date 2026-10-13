@@ -131,11 +131,23 @@ const guardarLS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); 
 const leerLS = (k, def) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch (e) { return def; } };
 
 // configuración: llega una vez por el enlace de Telegram (#k=…&u=…); la clave nunca viaja a GitHub (va tras el «#»)
+// En iOS la app de la pantalla de inicio NO comparte memoria con Safari: por eso, en Safari, el enlace conserva la clave
+// (y se quita el manifest) para que «Añadir a pantalla de inicio» se la lleve; ya instalada, la guarda y la borra del enlace.
+const INSTALADA = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+function leerEnlace(texto) {
+  const i = String(texto || '').indexOf('#'); if (i < 0) return null;
+  const h = new URLSearchParams(String(texto).slice(i + 1));
+  return h.get('k') && h.get('u') && /^https:\/\/script\.google\.com\//.test(h.get('u')) ? { k: h.get('k'), u: h.get('u') } : null;
+}
 (function () {
-  const h = new URLSearchParams(location.hash.slice(1));
-  if (h.get('k') && h.get('u')) { guardarLS('cj_cfg', { k: h.get('k'), u: h.get('u') }); history.replaceState(null, '', location.pathname); }
+  const c = leerEnlace(location.href);
+  if (c) {
+    guardarLS('cj_cfg', c);
+    if (INSTALADA) history.replaceState(null, '', location.pathname);
+    else { const m = document.querySelector('link[rel="manifest"]'); if (m) m.remove(); }
+  }
 })();
-const CFG = leerLS('cj_cfg', null);
+let CFG = leerLS('cj_cfg', null);
 
 const COLS = ['tareas', 'eventos', 'proyectos', 'metas'];
 const S = { doc: leerLS('cj_doc', null), diag: leerLS('cj_diag', {}), pend: leerLS('cj_pend', []), vista: leerLS('cj_vista', 'hoy'),
@@ -371,7 +383,15 @@ function toast(msg, deshacer) {
 
 function pintar() {
   const app = $('#app');
-  if (!CFG) { $('#tabs').hidden = true; app.innerHTML = `<div class="bienvenida"><div><img src="../icon-192.png" alt=""><h1>Centro JAN</h1><p>Abre esta app desde el enlace que te mandó tu bot de Telegram (@JanTheJuniper_Bot) para conectarla con tu centro.</p></div></div>`; return; }
+  if (!CFG) {
+    $('#tabs').hidden = true;
+    app.innerHTML = `<div class="bienvenida"><div><img src="../icon-192.png" alt=""><h1>Conecta tu centro</h1>
+      <p>Abre el enlace que te mandó tu bot de Telegram (@JanTheJuniper_Bot)${INSTALADA ? ', o cópialo y pégalo aquí:' : '.'}</p>
+      ${INSTALADA ? `<form class="nueva" id="fenlace" style="margin-top:16px"><input class="inp" name="enlace" placeholder="Pega aquí el enlace" autocomplete="off"><button class="btn pri" type="submit">Conectar</button></form>` : ''}</div></div>`;
+    const f = $('#fenlace');
+    if (f) f.onsubmit = (e) => { e.preventDefault(); const c = leerEnlace(new FormData(f).get('enlace')); if (!c) { toast('Ese enlace no es el del bot'); return; } guardarLS('cj_cfg', c); CFG = c; pintar(); sincronizar(); };
+    return;
+  }
   if (S.estado === 'clave') { $('#tabs').hidden = true; app.innerHTML = `<div class="bienvenida"><div><img src="../icon-192.png" alt=""><h1>Hay que reconectar</h1><p>La clave de la app ha cambiado. Abre el último enlace que te mandó el bot de Telegram.</p></div></div>`; return; }
   if (!S.doc) { $('#tabs').hidden = true; app.innerHTML = `<div class="bienvenida"><div><img src="../icon-192.png" alt=""><h1>Cargando tu centro…</h1><p>${S.estado === 'off' ? 'Sin conexión: en cuanto vuelva la red aparece todo.' : 'Un momento.'}</p></div></div>`; return; }
   $('#tabs').hidden = false;
@@ -379,7 +399,8 @@ function pintar() {
   const est = S.estado === 'off' ? ['off', 'Sin conexión · ' + (S.pend.length ? S.pend.length + ' por enviar' : 'datos ' + hace(S.ultima))] : S.estado === 'err' ? ['err', 'Reintentando…'] : S.pend.length ? ['', 'Guardando…'] : ['', hace(S.ultima)];
   if (!['hoy', 'semana', 'tareas', 'proyectos', 'carrera'].includes(S.vista)) S.vista = 'hoy';
   const titulo = { hoy: largo(hoyISO()).replace(/^./, (c) => c.toUpperCase()), semana: 'Tus dos semanas', tareas: pendientes().length + ' pendientes', proyectos: 'Avance real de cada proyecto', carrera: 'Redes, métricas y diagnóstico' }[S.vista];
-  app.innerHTML = `<header><img src="../icon-192.png" alt="JN"><div class="t"><h1>${S.vista === 'hoy' ? 'Hola, Jan' : { semana: 'Semana', tareas: 'Tareas', proyectos: 'Proyectos', carrera: 'Carrera' }[S.vista]}</h1><small>${esc(titulo)}</small></div><button class="estado ${est[0]}" id="refrescar">${esc(est[1])}</button></header>
+  const instalar = !INSTALADA && /iPhone|iPad/.test(navigator.userAgent) ? `<div class="card" style="border-color:var(--acc)"><b>Instálala:</b> botón Compartir ⬆️ → «Añadir a pantalla de inicio».</div>` : '';
+  app.innerHTML = instalar + `<header><img src="../icon-192.png" alt="JN"><div class="t"><h1>${S.vista === 'hoy' ? 'Hola, Jan' : { semana: 'Semana', tareas: 'Tareas', proyectos: 'Proyectos', carrera: 'Carrera' }[S.vista]}</h1><small>${esc(titulo)}</small></div><button class="estado ${est[0]}" id="refrescar">${esc(est[1])}</button></header>
     <div class="vista">${{ hoy: vHoy, semana: vSemana, tareas: vTareas, proyectos: vProyectos, carrera: vCarrera }[S.vista]()}</div>`;
   if (S.abierto) hojaProyecto(S.abierto);
 
