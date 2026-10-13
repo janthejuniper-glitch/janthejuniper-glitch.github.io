@@ -308,14 +308,16 @@ function vSemana() {
 function vTareas() {
   const hoy = hoyISO(), pend = pendientes(), prs = S.doc.proyectos || [];
   const grupos = [['Atrasadas', pend.filter((t) => t.fecha && t.fecha < hoy)], ['Hoy', pend.filter((t) => t.fecha === hoy)], ['Próximas', pend.filter((t) => t.fecha && t.fecha > hoy).sort((a, b) => a.fecha.localeCompare(b.fecha))], ['Sin fecha', pend.filter((t) => !t.fecha)]];
-  const hechas = (S.doc.tareas || []).filter((t) => t.estado === 'hecha').sort((a, b) => (b.hecha_en || '').localeCompare(a.hecha_en || '')).slice(0, 10);
+  const todasHechas = (S.doc.tareas || []).filter((t) => t.estado === 'hecha').sort((a, b) => (b.hecha_en || '').localeCompare(a.hecha_en || ''));
+  const hechas = S.verHechas ? todasHechas : todasHechas.slice(0, 10);
   return `<div class="card"><p class="label">Nueva tarea</p><form class="nueva" id="nueva">
       <input class="inp" name="titulo" placeholder="¿Qué hay que hacer?" required maxlength="200" autocomplete="off">
       <div class="fila"><input class="inp" type="date" name="fecha" value="${hoy}"><select class="inp" name="prioridad"><option value="media">Prioridad media</option><option value="alta">Alta</option><option value="baja">Baja</option></select></div>
       <select class="inp" name="proyecto"><option value="">Sin proyecto</option>${prs.filter((p) => p.estado !== 'archivado').map((p) => `<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('')}</select>
       <button class="btn pri" type="submit">Añadir</button></form></div>
     ${grupos.filter(([, l]) => l.length).map(([n, l]) => `<div class="card"><p class="label">${n} · ${l.length}</p>${l.sort((a, b) => importancia(b, prs, hoy) - importancia(a, prs, hoy)).map(filaTarea).join('')}</div>`).join('')}
-    ${hechas.length ? `<div class="card"><p class="label">Hechas hace poco</p>${hechas.map(filaTarea).join('')}</div>` : ''}`;
+    ${hechas.length ? `<div class="card"><p class="label">Hechas · ${todasHechas.length} (toca el círculo para reabrir)</p>${hechas.map(filaTarea).join('')}
+      ${todasHechas.length > 10 ? `<button class="btn" id="verHechas" style="margin-top:8px">${S.verHechas ? 'Ver solo las últimas' : 'Ver todas las hechas'}</button>` : ''}</div>` : ''}`;
 }
 function vProyectos() {
   const prs = (S.doc.proyectos || []).filter((p) => p.estado !== 'archivado');
@@ -332,21 +334,32 @@ function hoja(html) { $('#capa').innerHTML = `<div class="hoja" id="hoja"><div c
 const cerrar = () => { $('#capa').innerHTML = ''; S.abierto = null; };
 S.tarea = null;
 function hojaTurno(f) {
-  const tr = turnosDe(f), e = tr[0];
-  hoja(`<h2>${esc(largo(f))}</h2><form class="nueva" id="fturno">
-    <div class="fila"><label><span class="label">Entrada</span><input class="inp" type="time" name="inicio" value="${esc(e ? e.inicio : '14:00')}" required></label>
-    <label><span class="label">Salida</span><input class="inp" type="time" name="fin" value="${esc(e ? e.fin : '22:00')}" required></label></div>
-    <button class="btn pri" type="submit">${e ? 'Guardar cambio de horario' : 'Añadir turno'}</button>
-    ${e ? '<button class="btn peligro" type="button" id="libre">Ese día libro (quitar turno)</button>' : ''}<button class="btn" type="button" id="cancelar">Cancelar</button></form>
+  // cada turno del día por separado (turno partido incluido): cambiar horas, quitar uno, o añadir otro
+  const tr = turnosDe(f);
+  const fila = (e, i) => `<form class="nueva fturno" data-i="${i}" style="border-top:1px solid var(--line);padding-top:10px">
+      <div class="fila"><label><span class="label">Entrada</span><input class="inp" type="time" name="inicio" value="${esc(e ? e.inicio : '14:00')}" required></label>
+      <label><span class="label">Salida</span><input class="inp" type="time" name="fin" value="${esc(e ? e.fin : '22:00')}" required></label></div>
+      <button class="btn pri" type="submit">${e ? 'Guardar este turno' : 'Añadir turno'}</button>
+      ${e ? '<button class="btn peligro quitar" type="button">Quitar este turno</button>' : ''}</form>`;
+  hoja(`<h2>${esc(largo(f))}</h2>${tr.map(fila).join('')}${tr.length ? fila(null, -1).replace('Añadir turno', '+ Añadir otro turno') : fila(null, -1)}
+    ${tr.length > 1 ? '<button class="btn peligro" type="button" id="libre" style="margin-top:10px">Día libre (quitar todos)</button>' : ''}
+    <button class="btn" type="button" id="cancelar" style="margin-top:10px">Cerrar</button>
     <p class="vacio" style="font-size:13px">Va a tu calendario con aviso 90 min antes. Las tareas no se colocarán en esas horas.</p>`);
   $('#cancelar').onclick = cerrar;
-  $('#fturno').onsubmit = (ev) => {
-    ev.preventDefault(); const fd = new FormData(ev.target);
-    const x = Object.assign({}, e || { id: nuevoId(), tipo: 'turno', titulo: 'Trabajo', fecha: f }, { inicio: fd.get('inicio'), fin: fd.get('fin') });
-    cerrar(); setEn('eventos', x)(e ? 'Horario cambiado ✓' : 'Turno añadido ✓');
-  };
-  if (e) $('#libre').onclick = () => { cerrar(); cambiar({ col: { eventos: { set: [], del: tr.map((t) => t.id) } } }, 'Turno quitado: día libre 🌿'); };
+  document.querySelectorAll('#hoja .fturno').forEach((fm) => {
+    const e = tr[+fm.dataset.i];
+    fm.onsubmit = (ev) => {
+      ev.preventDefault(); const fd = new FormData(fm);
+      const x = Object.assign({}, e || { id: nuevoId(), tipo: 'turno', titulo: 'Trabajo', fecha: f }, { inicio: fd.get('inicio'), fin: fd.get('fin') });
+      cerrar(); setEn('eventos', x)(e ? 'Horario cambiado ✓' : 'Turno añadido ✓');
+    };
+    const q = fm.querySelector('.quitar');
+    if (q) q.onclick = () => { cerrar(); cambiar({ col: { eventos: { set: [], del: [e.id] } } }, tr.length > 1 ? 'Turno quitado' : 'Turno quitado: día libre 🌿'); };
+  });
+  const l = $('#libre');
+  if (l) l.onclick = () => { cerrar(); cambiar({ col: { eventos: { set: [], del: tr.map((t) => t.id) } } }, 'Día libre 🌿'); };
 }
+
 function hojaTarea(id) {
   const t = (S.doc.tareas || []).find((x) => x.id === id); if (!t) { S.tarea = null; return cerrar(); }
   S.tarea = id; const p = (S.doc.proyectos || []).find((x) => x.id === t.proyecto), h = p && (p.hitos || []).find((x) => x.id === t.hito);
@@ -412,6 +425,7 @@ document.addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.closest('#tabs') && b.dataset.v) { S.vista = b.dataset.v; guardarLS('cj_vista', S.vista); window.scrollTo(0, 0); pintar(); return; }
   if (b.id === 'refrescar') { sincronizar(); return; }
+  if (b.id === 'verHechas') { S.verHechas = !S.verHechas; pintar(); return; }
   if (b.dataset.t) { const t = (S.doc.tareas || []).find((x) => x.id === b.dataset.t); if (t) marcar(t); return; }
   if (b.dataset.a) { const a = ((S.diag && S.diag.avisos) || []).find((x) => x.id === b.dataset.id); if (!a) return; b.dataset.a === 'tarea' ? avisoATarea(a) : aviso(a, b.dataset.a); return; }
   if (b.dataset.dia) { hojaTurno(b.dataset.dia); return; }
