@@ -96,7 +96,7 @@
   nav.tabs button { flex: 1; display: grid; justify-items: center; gap: 2px; padding: 6px 0; font-size: 11px; font-weight: 600; color: var(--dim); }
   nav.tabs button span { font-size: 20px; line-height: 1; }
   nav.tabs button.on { color: var(--ink); }
-  .toast { position: fixed; left: 50%; bottom: calc(var(--sab) + 84px); transform: translateX(-50%); z-index: 30; display: flex; gap: 12px; align-items: center;
+  .toast { position: fixed; left: 50%; bottom: calc(var(--sab) + 84px); transform: translateX(-50%); z-index: 50; display: flex; gap: 12px; align-items: center;
     background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: 13px; font-weight: 600; font-size: 14px; box-shadow: 0 14px 40px rgba(0, 0, 0, .5); max-width: calc(100% - 32px); }
   .toast button { color: #5b2bbf; font-weight: 800; }
   .hoja { position: fixed; inset: 0; z-index: 40; display: grid; align-items: end; background: rgba(4, 3, 8, .6); }
@@ -386,7 +386,7 @@ function hoja(html) {
 const cerrar = () => {
   if (S.trabFlush) { const f = S.trabFlush; S.trabFlush = null; f(); }
   if (S.detFlush) { const f = S.detFlush; S.detFlush = null; f(); } // lo escrito en «Detalles» no se pierde aunque no pulses Guardar
-  $('#capa').innerHTML = ''; fondo(false); S.abierto = null;
+  $('#capa').innerHTML = ''; fondo(false); S.abierto = null; S.tarea = null; S.w = null;
   // el foco vuelve al elemento que abrió la hoja (o a su equivalente, si la lista se ha vuelto a pintar)
   const sel = focoAntes && ['data-abrir', 'data-p', 'data-dia', 'id'].map((k) => focoAntes.getAttribute(k) ? `[${k}="${focoAntes.getAttribute(k)}"]` : '').find(Boolean);
   const vuelta = sel && $(sel); if (vuelta) vuelta.focus({ preventScroll: true }); focoAntes = null;
@@ -498,7 +498,7 @@ function htmlTrabajo(t, w) {
 /** Rehace la hoja de la tarea conservando lo escrito en «Detalles» aunque no hayas pulsado Guardar */
 /** Tarea abierta y nada sin guardar: si llegó una versión más nueva de su trabajo (la seguiste en el PC), se muestra esa */
 function ponerAlDiaHoja() {
-  if (!S.tarea || !S.w || !$('#hoja') || S.trabFlush) return;
+  if (!S.tarea || !S.w || !$('#ftarea') || S.trabFlush) return; // solo si la hoja abierta es la de esa tarea
   const t = (S.doc.tareas || []).find((x) => x.id === S.tarea);
   if (t && t.trabajo && (t.trabajo.actualizado || '') > (S.w.actualizado || '')) { S.w = JSON.parse(JSON.stringify(t.trabajo)); rehacerHoja(S.tarea); }
 }
