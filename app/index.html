@@ -232,14 +232,24 @@ function avance(p, todos) {
   if (p.tipo !== 'ep') return propio;
   const c = todos.filter((x) => x.ep === p.id);
   // EP sin canciones registradas (p. ej. el 999): sus propios hitos valen el 100 %
-  if (!c.length) { const total = (p.hitos || []).reduce((a, h) => a + h.peso, 0); return total ? Math.round((propio * 100) / total) : 0; }
+  if (!c.length) { const r = repartoCien(p.hitos || []); return (p.hitos || []).reduce((a, h) => a + (h.hecho ? r[h.id] : 0), 0); }
   const media = c.reduce((a, x) => a + (avance(x, todos) || 0), 0) / c.length;
   return Math.round(media * 0.7 + propio);
 }
 // lo que suma de verdad un hito al % que se ve (así los hitos de un proyecto siempre suman 100)
 function pesoReal(p, h, todos) {
-  if (p.tipo === 'ep' && !todos.some((x) => x.ep === p.id)) { const total = (p.hitos || []).reduce((a, x) => a + x.peso, 0) || 1; return Math.round((h.peso * 100) / total); }
+  if (p.tipo === 'ep' && !todos.some((x) => x.ep === p.id)) return repartoCien(p.hitos || [])[h.id] ?? 0;
   return h.peso;
+}
+// reparte 100 entre los hitos según su peso, en enteros que suman exactamente 100 (igual que en el PC)
+function repartoCien(hitos) {
+  const total = hitos.reduce((a, h) => a + h.peso, 0), r = {};
+  if (!total) return r;
+  const exacto = hitos.map((h, i) => ({ id: h.id, i, v: (h.peso * 100) / total }));
+  exacto.forEach((x) => { r[x.id] = Math.floor(x.v); });
+  let sobra = 100 - exacto.reduce((a, x) => a + r[x.id], 0);
+  for (const x of [...exacto].sort((a, b) => (b.v % 1) - (a.v % 1) || a.i - b.i)) { if (sobra <= 0) break; r[x.id]++; sobra--; }
+  return r;
 }
 const sigHito = (p) => (p.hitos || []).find((h) => !h.hecho) || null;
 function importancia(t, proys, hoy) {
