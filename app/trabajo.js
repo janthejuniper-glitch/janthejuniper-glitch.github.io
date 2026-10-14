@@ -102,11 +102,31 @@
     return 0
   }
   /** mailto: con el asunto y el correo escritos en el trabajo */
+  /** «1.500,00 €», «1500.5», «300» → número (formato español incluido); lo que no es un número → 0 */
+  function numero(x) {
+    var s = String(x == null ? '' : x).replace(/[€\s]/g, '')
+    if (s.indexOf(',') >= 0) s = s.replace(/\./g, '').replace(',', '.')
+    else if ((s.match(/\./g) || []).length > 1) s = s.replace(/\./g, '')
+    var n = parseFloat(s)
+    return isFinite(n) ? n : 0
+  }
+  function total(w) { return ((w && w.filas) || []).reduce(function (a, f) { return a + numero(f.b) }, 0) }
+  /** Cambiar el tipo de trabajo NUNCA borra lo hecho: lo de cada tipo queda guardado y vuelve si regresas a él */
+  function cambiarTipo(t, w, tipo) {
+    if (!w || w.tipo === tipo) return w
+    var guardados = Object.assign({}, w.guardados || {}), previo = Object.assign({}, w)
+    delete previo.guardados; guardados[w.tipo] = previo
+    var n = guardados[tipo] ? Object.assign({}, guardados[tipo]) : nuevo(t, tipo)
+    delete guardados[tipo]
+    n.minutos = Math.max(w.minutos || 0, n.minutos || 0); n.guardados = guardados; n.acabado = w.acabado || null
+    if (w.archivo) { n.archivo = w.archivo; n.exportado = w.exportado }
+    return n
+  }
   function mailto(w) {
     var s = (w && w.secciones) || [], asunto = (s[0] && s[0].texto) || '', cuerpo = (s[1] && s[1].texto) || ''
     return 'mailto:?subject=' + encodeURIComponent(asunto) + '&body=' + encodeURIComponent(cuerpo)
   }
-  var api = { ATAJOS: ATAJOS, NOMBRES: NOMBRES, tipoDe: tipoDe, nuevo: nuevo, guia: guia, empezado: empezado, progreso: progreso, mailto: mailto, sinAcentos: sinAcentos }
+  var api = { ATAJOS: ATAJOS, NOMBRES: NOMBRES, tipoDe: tipoDe, nuevo: nuevo, guia: guia, empezado: empezado, progreso: progreso, mailto: mailto, sinAcentos: sinAcentos, numero: numero, total: total, cambiarTipo: cambiarTipo }
   if (typeof module !== 'undefined' && module.exports) module.exports = api
   g.TRABAJO = api
 })(typeof globalThis !== 'undefined' ? globalThis : this)

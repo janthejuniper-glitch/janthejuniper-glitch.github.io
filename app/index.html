@@ -285,8 +285,11 @@ const nombreProy = (id) => ((S.doc.proyectos || []).find((p) => p.id === id) || 
 
 // ── acciones
 function marcar(t) {
-  const hecha = t.estado !== 'hecha', antes = Object.assign({}, t);
-  setEn('tareas', Object.assign({}, t, { estado: hecha ? 'hecha' : 'pendiente', hecha_en: hecha ? hoyISO() : null }))(hecha ? '¡Hecho! ✓' : 'Reabierta', () => setEn('tareas', antes)('Deshecho'));
+  t = (S.doc.tareas || []).find((x) => x.id === t.id) || t; // siempre la versión de ahora (con lo último que escribiste)
+  const hecha = t.estado !== 'hecha', antes = JSON.parse(JSON.stringify(t)), x = JSON.parse(JSON.stringify(t));
+  Object.assign(x, { estado: hecha ? 'hecha' : 'pendiente', hecha_en: hecha ? hoyISO() : null });
+  if (!hecha && x.trabajo && x.trabajo.acabado) x.trabajo.acabado = null; // reabrir = vuelve a estar a medias
+  setEn('tareas', x)(hecha ? '¡Hecho! ✓' : 'Reabierta', () => setEn('tareas', antes)('Deshecho'));
 }
 function aviso(a, accion) {
   const v = accion === 'posponer' ? { estado: 'pospuesto', hasta: masDias(hoyISO(), 3) } : { estado: accion };
@@ -347,7 +350,8 @@ function vTareas() {
       <button class="btn pri" type="submit">Añadir</button></form></div>
     ${grupos.filter(([, l]) => l.length).map(([n, l]) => `<div class="card"><p class="label">${n} · ${l.length}</p>${l.sort((a, b) => importancia(b, prs, hoy) - importancia(a, prs, hoy)).map(filaTarea).join('')}</div>`).join('')}
     ${hechas.length ? `<div class="card"><p class="label">Hechas · ${todasHechas.length} (toca el círculo para reabrir)</p>${hechas.map(filaTarea).join('')}
-      ${todasHechas.length > 10 ? `<button class="btn" id="verHechas" style="margin-top:8px">${S.verHechas ? 'Ver solo las últimas' : 'Ver todas las hechas'}</button>` : ''}</div>` : ''}`;
+      ${todasHechas.length > 10 ? `<button class="btn" id="verHechas" style="margin-top:8px">${S.verHechas ? 'Ver solo las últimas' : 'Ver todas las hechas'}</button>` : ''}</div>` : ''}
+    <div class="card"><p class="label">Calendario y Recordatorios de Apple</p><div class="vacio" style="padding:0 0 10px">Tus turnos en el Calendario del iPhone y tus tareas con fecha en Recordatorios, siempre al día.</div><button class="btn pri" id="apple">Conectar con Apple</button></div>`;
 }
 function vProyectos() {
   const prs = (S.doc.proyectos || []).filter((p) => p.estado !== 'archivado');
@@ -404,7 +408,7 @@ function hojaTarea(id) {
     <button class="btn peligro" type="button" id="borrar">Borrar tarea</button><button class="btn" type="button" id="cancelar">Cerrar</button></form>`);
   $('#cancelar').onclick = () => { S.tarea = null; cerrar(); };
   $('#hecha').onclick = () => { S.tarea = null; cerrar(); marcar(t); };
-  $('#borrar').onclick = () => { S.tarea = null; cerrar(); const antes = Object.assign({}, t); cambiar({ col: { tareas: { set: [], del: [t.id] } } }, 'Tarea borrada', () => setEn('tareas', antes)('Recuperada')); };
+  $('#borrar').onclick = () => { S.tarea = null; cerrar(); const antes = JSON.parse(JSON.stringify((S.doc.tareas || []).find((x) => x.id === t.id) || t)); cambiar({ col: { tareas: { set: [], del: [t.id] } } }, 'Tarea borrada', () => setEn('tareas', antes)('Recuperada')); };
   $('#ftarea').onsubmit = (ev) => { ev.preventDefault(); const fd = new FormData(ev.target); S.tarea = null; cerrar();
     const ahora = (S.doc.tareas || []).find((x) => x.id === t.id) || t;
     setEn('tareas', Object.assign({}, ahora, { notas: String(fd.get('notas') || ''), fecha: fd.get('fecha') || null, prioridad: fd.get('prioridad') || 'media' }))('Guardada ✓'); };
@@ -429,7 +433,7 @@ function guardarTrabajo(id, ya) {
   S.trabFlush = hazlo;
   if (ya) hazlo(); else tTrab = setTimeout(hazlo, 800);
 }
-const totalLista = (w) => (w.filas || []).reduce((a, f) => a + (parseFloat(String(f.b || '').replace(',', '.')) || 0), 0);
+const totalLista = (w) => TW.total(w);
 function htmlTrabajo(t, w) {
   const g = TW.guia(Object.assign({}, t, { trabajo: w })), hecha = t.estado === 'hecha';
   let cuerpo = '';
@@ -480,7 +484,8 @@ function conectarTrabajo(id) {
   hoja.querySelectorAll('a[data-atajo="correo"]').forEach((a) => a.addEventListener('click', () => { a.href = TW.mailto(w); guardarTrabajo(id, true); }));
   const tp = $('#wtipo'); if (tp) tp.addEventListener('change', () => {
     const t = (S.doc.tareas || []).find((x) => x.id === id); if (!t) return;
-    S.w = Object.assign(TW.nuevo(t, tp.value), { minutos: w.minutos || 0 }); guardarTrabajo(id, true); hojaTarea(id);
+    const antes = w.tipo; S.w = TW.cambiarTipo(t, w, tp.value); guardarTrabajo(id, true); hojaTarea(id);
+    toast('Lo que tenías sigue guardado: vuelve a «' + TW.NOMBRES[antes] + '» para verlo');
   });
   const fin = $('#wterminar'); if (fin) fin.addEventListener('click', () => {
     guardarTrabajo(id, true);
@@ -490,6 +495,33 @@ function conectarTrabajo(id) {
     setEn('tareas', Object.assign({}, t, { estado: 'hecha', hecha_en: hoyISO(), trabajo }))('¡Hecho! ✓ Se guarda en tu biblioteca');
   });
 }
+// ── Conectar con Apple: el Calendario va solo (cuenta de Google en Ajustes); Recordatorios, con un Atajo que lee tu API
+function hojaApple() {
+  const base = CFG.u + '?k=' + encodeURIComponent(CFG.k);
+  const copiar = (txt) => (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Copiado ✓'), () => toast('No se pudo copiar'));
+  const paso = (n, html) => `<div class="row"><span class="chip" style="flex:none">${n}</span><div class="txt">${html}</div></div>`;
+  hoja(`<h2>Conectar con Apple</h2>
+    <div class="card"><p class="label">1 · Calendario (1 minuto, una sola vez)</p>
+      ${paso(1, '<b>Ajustes</b> → <b>Apps</b> → <b>Calendario</b> → <b>Cuentas de calendario</b> → <b>Añadir cuenta</b> → <b>Google</b>.')}
+      ${paso(2, 'Entra con tu cuenta de Google de siempre y deja activado <b>Calendarios</b>.')}
+      ${paso(3, 'En la app <b>Calendario</b> → <b>Calendarios</b>: deja marcado <b>«Centro JAN»</b> (tus turnos y eventos del centro).')}
+      <div class="meta">Desde ahí, lo que añadas en el centro, el bot o esta app aparece solo en el Calendario de Apple, con su aviso.</div></div>
+    <div class="card"><p class="label">2 · Recordatorios (unos 10 minutos, una sola vez)</p>
+      ${paso(1, 'En <b>Recordatorios</b>, crea una lista llamada <b>Centro JAN</b>.')}
+      ${paso(2, 'En <b>Atajos</b> → <b>+</b> → nombre «Centro JAN → Recordatorios». Añade <b>Obtener contenido de URL</b> y pega la <b>dirección A</b>.')}
+      ${paso(3, '<b>Dividir texto</b> por «Nuevas líneas» → <b>Repetir con cada elemento</b> → dentro: <b>Dividir texto</b> por «Personalizado: ¦».')}
+      ${paso(4, 'Dentro del bucle: <b>Buscar recordatorios</b> donde Notas contiene el elemento 2 → <b>Eliminar recordatorios</b>. Después <b>Si</b> el elemento 1 es «+»: <b>Añadir recordatorio</b> (título = elemento 3, lista Centro JAN, alerta = elemento 4, notas = elemento 2).')}
+      ${paso(5, 'Al final: <b>Buscar recordatorios</b> de la lista Centro JAN, completados, en los últimos 2 días → <b>Repetir</b> → <b>Obtener contenido de URL</b>: <b>dirección B</b> + las notas del recordatorio + «&cuando=» + su fecha de completado.')}
+      ${paso(6, 'En <b>Automatización</b> → <b>Hora del día</b> (8:00, 14:00 y 20:00) y <b>Al abrir la app Recordatorios</b> → ejecuta el atajo, con <b>Ejecutar inmediatamente</b>.')}
+      <div class="btns"><button class="btn pri" type="button" id="copiaA">Copiar dirección A</button><button class="btn" type="button" id="copiaB">Copiar dirección B</button><button class="btn" type="button" id="copiaT">Copiar A (reenviar todo)</button></div>
+      <div class="meta">Las direcciones llevan tu clave privada: no las compartas. «Reenviar todo» sirve si borras la lista y quieres rehacerla.</div></div>
+    <div class="btns"><button class="btn" type="button" id="cancelar">Cerrar</button></div>`);
+  $('#copiaA').onclick = () => copiar(base + '&op=rec');
+  $('#copiaB').onclick = () => copiar(base + '&op=rec_hecha&id=');
+  $('#copiaT').onclick = () => copiar(base + '&op=rec&todo=1');
+  $('#cancelar').onclick = cerrar;
+}
+
 function hojaProyecto(id) {
   const p = (S.doc.proyectos || []).find((x) => x.id === id); if (!p) return cerrar();
   S.abierto = id; const pc = avance(p, S.doc.proyectos);
@@ -539,6 +571,7 @@ document.addEventListener('click', (e) => {
   if (b.closest('#tabs') && b.dataset.v) { S.vista = b.dataset.v; guardarLS('cj_vista', S.vista); window.scrollTo(0, 0); pintar(); return; }
   if (b.id === 'refrescar') { sincronizar(); return; }
   if (b.id === 'verHechas') { S.verHechas = !S.verHechas; pintar(); return; }
+  if (b.id === 'apple') { hojaApple(); return; }
   if (b.dataset.t) { const t = (S.doc.tareas || []).find((x) => x.id === b.dataset.t); if (t) marcar(t); return; }
   if (b.dataset.a) { const a = ((S.diag && S.diag.avisos) || []).find((x) => x.id === b.dataset.id); if (!a) return; b.dataset.a === 'tarea' ? avisoATarea(a) : aviso(a, b.dataset.a); return; }
   if (b.dataset.dia) { hojaTurno(b.dataset.dia); return; }
