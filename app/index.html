@@ -106,6 +106,16 @@
   .bienvenida img { width: 84px; height: 84px; border-radius: 24px; margin-bottom: 18px; box-shadow: 0 0 0 1px var(--edge), 0 0 50px rgba(157, 77, 255, .45); }
   .bienvenida h1 { font: 800 24px var(--display); margin: 0 0 8px; }
   .bienvenida p { color: var(--mute); max-width: 320px; margin: 0 auto; }
+  .paso1 { padding: 10px 12px; border-radius: 12px; background: rgba(201, 182, 255, .1); border: 1px solid var(--line); font-size: 14px; margin-bottom: 10px; }
+  .wbarra { height: 5px; border-radius: 99px; background: rgba(255, 255, 255, .08); overflow: hidden; margin-bottom: 12px; }
+  .wbarra i { display: block; height: 100%; background: linear-gradient(90deg, #9f8cff, #e07bff); }
+  .wsec { display: grid; gap: 6px; margin-bottom: 12px; }
+  .wsec .cont { float: right; letter-spacing: 0; text-transform: none; color: var(--dim); } .wsec .cont.mal { color: var(--bad); }
+  .wfila { display: grid; grid-template-columns: 26px 1.3fr 1fr 34px; gap: 6px; align-items: center; margin-bottom: 6px; }
+  .wfila .inp { padding: 9px 10px; }
+  a.btn { color: inherit; text-decoration: none; display: inline-block; }
+  .seguir { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 10px 0; border-top: 1px solid var(--line); }
+  .seguir:first-of-type { border-top: 0; } .seguir b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   @media (prefers-reduced-motion: no-preference) { .vista { animation: entra .25s ease-out; } @keyframes entra { from { opacity: 0; transform: translateY(6px); } } }
 </style>
 </head>
@@ -119,6 +129,7 @@
   <button data-v="carrera"><span>📈</span>Carrera</button>
 </div></nav>
 <div id="capa"></div>
+<script src="trabajo.js"></script>
 <script>
 'use strict';
 // ───────────── Centro JAN · app del iPhone
@@ -301,14 +312,16 @@ function vHoy() {
   return `<div class="card">${tr.length ? tr.map((e) => `<div class="turno"><span class="ico">🛍️</span><div><b>Trabajo ${esc(e.inicio)}–${esc(e.fin)}</b><div class="sub">${esc(e.titulo !== 'Trabajo' ? e.titulo : 'Turno de hoy')}</div></div></div>`).join('')
       : `<div class="turno"><span class="ico">🌿</span><div><b>Sin turno</b><div class="sub">Día para tu música</div></div></div>`}
     <div class="meta" style="margin-top:10px">Mañana: ${manana.length ? manana.map((e) => esc(e.inicio + '–' + e.fin)).join(', ') : 'libre'}</div></div>
+    ${aMedias().length ? `<div class="card"><p class="label">Seguir donde lo dejaste</p>${aMedias().map((t) => `<button class="seguir" data-abrir="${esc(t.id)}"><b>${esc(t.titulo)}</b><span class="chip">${Math.round(TW.progreso(t.trabajo) * 100)} %</span><span class="btn pri">Seguir →</span></button>`).join('')}</div>` : ''}
     <div class="card"><p class="label">Ahora toca</p>${tareas.length ? tareas.map(filaTarea).join('') : '<div class="vacio">Nada pendiente para hoy. 💜</div>'}</div>
     ${avisos.map((a) => `<div class="card aviso"><p class="label">${a.tipo === 'alerta' ? '⚠️ Aviso' : '💡 Consejo'}</p><b>${esc(a.titulo)}</b><div class="vacio" style="padding:0">${esc(a.texto)}</div><div class="acc">→ ${esc(a.accion)}</div>
       <div class="btns"><button class="btn pri" data-a="tarea" data-id="${esc(a.id)}">→ Tarea</button><button class="btn" data-a="hecho" data-id="${esc(a.id)}">Hecho</button><button class="btn" data-a="posponer" data-id="${esc(a.id)}">Posponer 3 d</button><button class="btn" data-a="descartado" data-id="${esc(a.id)}">Descartar</button></div></div>`).join('')}`;
 }
+const aMedias = () => (S.doc.tareas || []).filter((t) => t.estado !== 'hecha' && t.trabajo && TW.empezado(t.trabajo)).sort((a, b) => (b.trabajo.actualizado || '').localeCompare(a.trabajo.actualizado || '')).slice(0, 3);
 function filaTarea(t) {
   const hoy = hoyISO(), p = nombreProy(t.proyecto);
   return `<div class="row ${t.estado === 'hecha' ? 'hecha' : ''}"><button class="check ${t.estado === 'hecha' ? 'on' : ''}" data-t="${esc(t.id)}" aria-label="Marcar"></button>
-    <div class="txt" data-abrir="${esc(t.id)}"><div class="tt">${esc(t.titulo)}</div><div class="meta">${p ? `<span class="chip">${esc(p)}</span>` : ''}${t.prioridad === 'alta' ? '<span class="chip alta">alta</span>' : ''}
+    <div class="txt" data-abrir="${esc(t.id)}"><div class="tt">${esc(t.titulo)}</div><div class="meta">${p ? `<span class="chip">${esc(p)}</span>` : ''}${t.prioridad === 'alta' ? '<span class="chip alta">alta</span>' : ''}${t.estado !== 'hecha' && t.trabajo && TW.empezado(t.trabajo) ? `<span class="chip">✎ ${Math.round(TW.progreso(t.trabajo) * 100)} %</span>` : ''}${t.trabajo && t.trabajo.archivo ? '<span>📄</span>' : ''}
     ${t.fecha ? `<span class="${t.fecha < hoy && t.estado !== 'hecha' ? 'chip tarde' : ''}">${t.fecha === hoy ? 'hoy' : t.fecha < hoy ? 'atrasada · ' + esc(t.fecha.slice(5).split('-').reverse().join('/')) : esc(largo(t.fecha))}</span>` : ''}</div></div></div>`;
 }
 function vSemana() {
@@ -329,8 +342,8 @@ function vTareas() {
   const hechas = S.verHechas ? todasHechas : todasHechas.slice(0, 10);
   return `<div class="card"><p class="label">Nueva tarea</p><form class="nueva" id="nueva">
       <input class="inp" name="titulo" placeholder="¿Qué hay que hacer?" required maxlength="200" autocomplete="off">
-      <div class="fila"><input class="inp" type="date" name="fecha" value="${hoy}"><select class="inp" name="prioridad"><option value="media">Prioridad media</option><option value="alta">Alta</option><option value="baja">Baja</option></select></div>
-      <select class="inp" name="proyecto"><option value="">Sin proyecto</option>${prs.filter((p) => p.estado !== 'archivado').map((p) => `<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('')}</select>
+      <div class="fila"><input class="inp" type="date" name="fecha" value="${hoy}" aria-label="Fecha"><select class="inp" name="prioridad" aria-label="Prioridad"><option value="media">Prioridad media</option><option value="alta">Alta</option><option value="baja">Baja</option></select></div>
+      <select class="inp" name="proyecto" aria-label="Proyecto"><option value="">Sin proyecto</option>${prs.filter((p) => p.estado !== 'archivado').map((p) => `<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('')}</select>
       <button class="btn pri" type="submit">Añadir</button></form></div>
     ${grupos.filter(([, l]) => l.length).map(([n, l]) => `<div class="card"><p class="label">${n} · ${l.length}</p>${l.sort((a, b) => importancia(b, prs, hoy) - importancia(a, prs, hoy)).map(filaTarea).join('')}</div>`).join('')}
     ${hechas.length ? `<div class="card"><p class="label">Hechas · ${todasHechas.length} (toca el círculo para reabrir)</p>${hechas.map(filaTarea).join('')}
@@ -348,7 +361,7 @@ function vProyectos() {
 
 // ── hojas (editar turno, ver proyecto)
 function hoja(html) { $('#capa').innerHTML = `<div class="hoja" id="hoja"><div class="in">${html}</div></div>`; $('#hoja').addEventListener('click', (e) => { if (e.target.id === 'hoja') cerrar(); }); }
-const cerrar = () => { $('#capa').innerHTML = ''; S.abierto = null; };
+const cerrar = () => { if (S.trabFlush) { const f = S.trabFlush; S.trabFlush = null; f(); } $('#capa').innerHTML = ''; S.abierto = null; };
 S.tarea = null;
 function hojaTurno(f) {
   // cada turno del día por separado (turno partido incluido): cambiar horas, quitar uno, o añadir otro
@@ -380,10 +393,12 @@ function hojaTurno(f) {
 function hojaTarea(id) {
   const t = (S.doc.tareas || []).find((x) => x.id === id); if (!t) { S.tarea = null; return cerrar(); }
   S.tarea = id; const p = (S.doc.proyectos || []).find((x) => x.id === t.proyecto), h = p && (p.hitos || []).find((x) => x.id === t.hito);
+  S.w = JSON.parse(JSON.stringify(t.trabajo || TW.nuevo(t)));
   hoja(`<h2>${esc(t.titulo)}</h2><div class="meta" style="margin:-6px 0 12px">${p ? `<span class="chip">${esc(p.nombre)}</span>` : 'Carrera y redes'}${t.estado === 'hecha' ? ' · hecha' : ''}</div>
+    ${htmlTrabajo(t, S.w)}
     ${h ? `<div class="card" style="margin-bottom:10px"><p class="label">Cuenta para</p><b>${esc(h.nombre)} · +${pesoReal(p, h, S.doc.proyectos || [])} %</b><div class="meta">Hecho cuando: ${esc(h.criterio || '')}</div></div>` : ''}
-    <form class="nueva" id="ftarea"><label><span class="label">Notas</span><textarea class="inp" name="notas" rows="4" placeholder="Lo que necesites recordar…">${esc(t.notas || '')}</textarea></label>
-    <div class="fila"><input class="inp" type="date" name="fecha" value="${esc(t.fecha || '')}"><select class="inp" name="prioridad">${['alta', 'media', 'baja'].map((x) => `<option value="${x}" ${t.prioridad === x ? 'selected' : ''}>Prioridad ${x}</option>`).join('')}</select></div>
+    <form class="nueva" id="ftarea"><p class="label">Detalles</p><label><span class="label">Notas</span><textarea class="inp" name="notas" rows="4" placeholder="Lo que necesites recordar…">${esc(t.notas || '')}</textarea></label>
+    <div class="fila"><input class="inp" type="date" name="fecha" value="${esc(t.fecha || '')}" aria-label="Fecha"><select class="inp" name="prioridad" aria-label="Prioridad">${['alta', 'media', 'baja'].map((x) => `<option value="${x}" ${t.prioridad === x ? 'selected' : ''}>Prioridad ${x}</option>`).join('')}</select></div>
     <button class="btn pri" type="submit">Guardar</button>
     <button class="btn" type="button" id="hecha">${t.estado === 'hecha' ? '↺ Reabrir' : '✓ Marcar como hecha'}</button>
     <button class="btn peligro" type="button" id="borrar">Borrar tarea</button><button class="btn" type="button" id="cancelar">Cerrar</button></form>`);
@@ -391,7 +406,89 @@ function hojaTarea(id) {
   $('#hecha').onclick = () => { S.tarea = null; cerrar(); marcar(t); };
   $('#borrar').onclick = () => { S.tarea = null; cerrar(); const antes = Object.assign({}, t); cambiar({ col: { tareas: { set: [], del: [t.id] } } }, 'Tarea borrada', () => setEn('tareas', antes)('Recuperada')); };
   $('#ftarea').onsubmit = (ev) => { ev.preventDefault(); const fd = new FormData(ev.target); S.tarea = null; cerrar();
-    setEn('tareas', Object.assign({}, t, { notas: String(fd.get('notas') || ''), fecha: fd.get('fecha') || null, prioridad: fd.get('prioridad') || 'media' }))('Guardada ✓'); };
+    const ahora = (S.doc.tareas || []).find((x) => x.id === t.id) || t;
+    setEn('tareas', Object.assign({}, ahora, { notas: String(fd.get('notas') || ''), fecha: fd.get('fecha') || null, prioridad: fd.get('prioridad') || 'media' }))('Guardada ✓'); };
+  conectarTrabajo(t.id);
+}
+
+// ── MODO TRABAJO: la tarea se hace aquí (plantillas y atajos: trabajo.js, el mismo archivo que usa el PC)
+const TW = window.TRABAJO;
+let tTrab = null;
+/** Guarda el trabajo de la tarea (solo ese campo, sobre la tarea tal como esté ahora). `ya`: sin esperar. */
+function guardarTrabajo(id, ya) {
+  clearTimeout(tTrab);
+  const g = $('#wguard'); if (g) g.textContent = 'Guardando…';
+  const barra = $('#hoja .wbarra i'); if (barra && S.w) { const pc = Math.round(TW.progreso(S.w) * 100); barra.style.width = pc + '%'; barra.parentElement.setAttribute('aria-valuenow', pc); }
+  const hazlo = () => {
+    S.trabFlush = null; clearTimeout(tTrab);
+    const t = (S.doc.tareas || []).find((x) => x.id === id); if (!t || !S.w) return;
+    S.w.actualizado = new Date().toISOString();
+    setEn('tareas', Object.assign({}, t, { trabajo: JSON.parse(JSON.stringify(S.w)) }))();
+    const g2 = $('#wguard'); if (g2) g2.textContent = 'Guardado ✓';
+  };
+  S.trabFlush = hazlo;
+  if (ya) hazlo(); else tTrab = setTimeout(hazlo, 800);
+}
+const totalLista = (w) => (w.filas || []).reduce((a, f) => a + (parseFloat(String(f.b || '').replace(',', '.')) || 0), 0);
+function htmlTrabajo(t, w) {
+  const g = TW.guia(Object.assign({}, t, { trabajo: w })), hecha = t.estado === 'hecha';
+  let cuerpo = '';
+  if (w.tipo === 'texto') cuerpo = (w.secciones || []).map((s, i) => `<label class="wsec"><span class="label">${esc(s.titulo)}${s.max ? `<span class="cont ${(s.texto || '').length > s.max ? 'mal' : ''}" data-cont="${i}">${(s.texto || '').length} / ${s.max}</span>` : ''}</span>
+      <textarea class="inp" rows="${Math.min(10, Math.max(3, Math.ceil((s.max || 600) / 200)))}" data-sec="${i}" placeholder="Escribe aquí… (se guarda solo)">${esc(s.texto || '')}</textarea>
+      <span><button type="button" class="btn" data-copiar="${i}">Copiar</button></span></label>`).join('');
+  if (w.tipo === 'lista') cuerpo = `<p class="label">${esc(g.columnas[0])} · ${esc(g.columnas[1])}</p>` + (w.filas || []).map((f, i) => `<div class="wfila"><button type="button" class="check ${f.hecho ? 'on' : ''}" data-fh="${i}" aria-label="Marcar"></button>
+      <input class="inp" data-fa="${i}" value="${esc(f.a)}" aria-label="${esc(g.columnas[0])}"><input class="inp" data-fb="${i}" value="${esc(f.b)}" aria-label="${esc(g.columnas[1])}" ${g.importe ? 'inputmode="decimal"' : ''}>
+      <button type="button" class="btn" data-fq="${i}" aria-label="Quitar fila">✕</button></div>`).join('')
+    + `<button type="button" class="btn" id="wfila">+ Añadir</button>${g.importe ? `<div class="meta" id="wtotal" style="margin-top:8px">Total: ${Math.round(totalLista(w))} €</div>` : ''}`;
+  if (w.tipo === 'fuera') cuerpo = (w.pasos || []).map((x, i) => `<button type="button" class="hito" data-paso="${i}"><span class="check ${x.hecho ? 'on' : ''}"></span><span>${esc(x.texto)}</span></button>`).join('')
+    + `<label class="wsec" style="margin-top:8px"><span class="label">Enlace o justificante</span><input class="inp" data-just value="${esc(w.justificante || '')}" placeholder="Pega aquí el enlace o el nº de registro"></label>`;
+  if (w.tipo === 'escucha') cuerpo = `<label class="wsec"><span class="label">Notas de la escucha</span><textarea class="inp" rows="4" data-campo="notas" placeholder="Qué suena bien, qué cambiarías…">${esc(w.notas || '')}</textarea></label>
+    <label class="wsec"><span class="label">Decisión</span><textarea class="inp" rows="2" data-campo="decision" placeholder="Qué haces al final">${esc(w.decision || '')}</textarea></label>
+    <p class="vacio" style="font-size:13px">Los audios están en tu PC: allí los escuchas y anotas por minuto.</p>`;
+  if (w.tipo === 'fotos') cuerpo = `<p class="vacio">Elegidas: ${(w.fotos || []).length} / ${g.cuantas}. Las fotos se eligen en el Centro del PC (están allí).</p>`;
+  const atajos = g.atajos.filter((a) => !a.interno).map((a) => `<a class="btn" href="${esc(a.id === 'correo' ? TW.mailto(w) : a.url)}"${a.id === 'correo' ? '' : ' target="_blank" rel="noopener noreferrer"'} data-atajo="${esc(a.id)}">↗ ${esc(a.txt)}</a>`).join('');
+  return `<div class="card"><p class="label">${esc(g.nombre)} · <span id="wguard">${w.actualizado ? 'Guardado ✓' : 'Se guarda solo'}</span></p>
+    ${hecha || w.acabado ? `<div class="meta" style="color:var(--ok);margin-bottom:10px">✓ ${hecha ? 'Hecha' : 'Terminada'}${w.archivo ? ' · en tu biblioteca: ' + esc(w.archivo.split('/').pop()) : w.acabado ? ' · tu PC la guarda en tu biblioteca al sincronizar' : ''}</div>` : `<div class="paso1"><b>Primer paso (2 min):</b> ${esc(g.paso)}</div>`}
+    <div class="wbarra" role="progressbar" aria-label="Lo que llevas de esta tarea" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(TW.progreso(w) * 100)}"><i style="width:${Math.round(TW.progreso(w) * 100)}%"></i></div>
+    ${cuerpo}${atajos ? `<p class="label" style="margin-top:12px">Atajos</p><div class="btns" style="margin-top:0">${atajos}</div>` : ''}
+    <div class="btns"><select class="inp" id="wtipo" style="width:auto" aria-label="Tipo de trabajo" ${hecha ? 'disabled' : ''}>${Object.keys(TW.NOMBRES).map((k) => `<option value="${k}" ${k === w.tipo ? 'selected' : ''}>${esc(TW.NOMBRES[k])}</option>`).join('')}</select>
+    ${hecha ? '' : '<button type="button" class="btn pri" id="wterminar">✓ Terminar y guardar</button>'}</div></div>`;
+}
+function conectarTrabajo(id) {
+  const w = S.w, hoja = $('#hoja'); if (!hoja || !w) return;
+  const rehacer = () => { guardarTrabajo(id, true); hojaTarea(id); };
+  hoja.querySelectorAll('[data-sec]').forEach((ta) => ta.addEventListener('input', () => {
+    const i = +ta.dataset.sec; w.secciones[i].texto = ta.value; w.secciones[i].editado = true;
+    const c = hoja.querySelector(`[data-cont="${i}"]`); if (c) { c.textContent = ta.value.length + ' / ' + w.secciones[i].max; c.classList.toggle('mal', ta.value.length > w.secciones[i].max); }
+    guardarTrabajo(id);
+  }));
+  hoja.querySelectorAll('[data-copiar]').forEach((b) => b.addEventListener('click', () => {
+    const txt = w.secciones[+b.dataset.copiar].texto || '';
+    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Copiado'), () => toast('No se pudo copiar'));
+  }));
+  hoja.querySelectorAll('[data-fa],[data-fb]').forEach((inp) => inp.addEventListener('input', () => {
+    const i = +(inp.dataset.fa ?? inp.dataset.fb); w.filas[i][inp.dataset.fa !== undefined ? 'a' : 'b'] = inp.value;
+    const tt = $('#wtotal'); if (tt) tt.textContent = 'Total: ' + Math.round(totalLista(w)) + ' €';
+    guardarTrabajo(id);
+  }));
+  hoja.querySelectorAll('[data-fh]').forEach((b) => b.addEventListener('click', () => { const f = w.filas[+b.dataset.fh]; f.hecho = !f.hecho; rehacer(); }));
+  hoja.querySelectorAll('[data-fq]').forEach((b) => b.addEventListener('click', () => { w.filas.splice(+b.dataset.fq, 1); rehacer(); }));
+  const nf = $('#wfila'); if (nf) nf.addEventListener('click', () => { (w.filas = w.filas || []).push({ hecho: false, a: '', b: '' }); rehacer(); });
+  hoja.querySelectorAll('[data-paso]').forEach((b) => b.addEventListener('click', () => { const x = w.pasos[+b.dataset.paso]; x.hecho = !x.hecho; rehacer(); }));
+  const j = hoja.querySelector('[data-just]'); if (j) j.addEventListener('input', () => { w.justificante = j.value; guardarTrabajo(id); });
+  hoja.querySelectorAll('[data-campo]').forEach((ta) => ta.addEventListener('input', () => { w[ta.dataset.campo] = ta.value; guardarTrabajo(id); }));
+  hoja.querySelectorAll('a[data-atajo="correo"]').forEach((a) => a.addEventListener('click', () => { a.href = TW.mailto(w); guardarTrabajo(id, true); }));
+  const tp = $('#wtipo'); if (tp) tp.addEventListener('change', () => {
+    const t = (S.doc.tareas || []).find((x) => x.id === id); if (!t) return;
+    S.w = Object.assign(TW.nuevo(t, tp.value), { minutos: w.minutos || 0 }); guardarTrabajo(id, true); hojaTarea(id);
+  });
+  const fin = $('#wterminar'); if (fin) fin.addEventListener('click', () => {
+    guardarTrabajo(id, true);
+    const t = (S.doc.tareas || []).find((x) => x.id === id); if (!t) return;
+    const trabajo = Object.assign({}, S.w, { acabado: hoyISO(), actualizado: new Date().toISOString() });
+    S.tarea = null; S.w = null; cerrar();
+    setEn('tareas', Object.assign({}, t, { estado: 'hecha', hecha_en: hoyISO(), trabajo }))('¡Hecho! ✓ Se guarda en tu biblioteca');
+  });
 }
 function hojaProyecto(id) {
   const p = (S.doc.proyectos || []).find((x) => x.id === id); if (!p) return cerrar();
@@ -437,7 +534,7 @@ function pintar() {
 
 // delegación de eventos (una sola vez)
 document.addEventListener('click', (e) => {
-  const ab = e.target.closest('[data-abrir]'); if (ab && !e.target.closest('button')) { hojaTarea(ab.dataset.abrir); return; }
+  const ab = e.target.closest('[data-abrir]'); if (ab && (!e.target.closest('button') || e.target.closest('button.seguir'))) { hojaTarea(ab.dataset.abrir); return; }
   const b = e.target.closest('button'); if (!b) return;
   if (b.closest('#tabs') && b.dataset.v) { S.vista = b.dataset.v; guardarLS('cj_vista', S.vista); window.scrollTo(0, 0); pintar(); return; }
   if (b.id === 'refrescar') { sincronizar(); return; }
