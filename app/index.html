@@ -214,7 +214,10 @@ function sincronizar() {
     } catch (e) {
       S.estado = navigator.onLine === false ? 'off' : (e.message === 'clave' ? 'clave' : 'err');
       if (S.estado !== 'clave') { setTimeout(sincronizar, espera); espera = Math.min(espera * 2, 120000); }
-    } finally { enVuelo = 0; enCurso = null; pintar(); if (S.pend.length && S.estado === 'ok') sincronizar(); }
+    } finally {
+      enVuelo = 0; enCurso = null; pintar(); ponerAlDiaHoja();
+      if (S.pend.length && S.estado === 'ok') sincronizar();
+    }
   })();
   return enCurso;
 }
@@ -493,6 +496,12 @@ function htmlTrabajo(t, w) {
     ${hecha ? '' : '<button type="button" class="btn pri" id="wterminar">✓ Terminar y guardar</button>'}</div></div>`;
 }
 /** Rehace la hoja de la tarea conservando lo escrito en «Detalles» aunque no hayas pulsado Guardar */
+/** Tarea abierta y nada sin guardar: si llegó una versión más nueva de su trabajo (la seguiste en el PC), se muestra esa */
+function ponerAlDiaHoja() {
+  if (!S.tarea || !S.w || !$('#hoja') || S.trabFlush) return;
+  const t = (S.doc.tareas || []).find((x) => x.id === S.tarea);
+  if (t && t.trabajo && (t.trabajo.actualizado || '') > (S.w.actualizado || '')) { S.w = JSON.parse(JSON.stringify(t.trabajo)); rehacerHoja(S.tarea); }
+}
 function rehacerHoja(id) {
   const f = $('#ftarea'), d = f ? { notas: f.notas.value, fecha: f.fecha.value, prioridad: f.prioridad.value } : null, base = S.detBase;
   // el foco vuelve al mismo control (el lector de pantalla no salta al principio de la hoja)
@@ -615,9 +624,11 @@ function pintar() {
   const titulo = { hoy: largo(hoyISO()).replace(/^./, (c) => c.toUpperCase()), semana: 'Tus dos semanas', tareas: pendientes().length + ' pendientes', proyectos: 'Avance real de cada proyecto', carrera: 'Redes, métricas y diagnóstico' }[S.vista];
   const instalar = !INSTALADA && /iPhone|iPad/.test(navigator.userAgent) ? `<div class="card" style="border-color:var(--acc)"><b>Instálala:</b> botón Compartir ⬆️ → «Añadir a pantalla de inicio».</div>` : '';
   const fN = $('#nueva'), activo = document.activeElement;
+  const selFoco = activo && app.contains(activo) && ['data-t', 'data-abrir', 'data-dia', 'data-p', 'data-v', 'id'].map((k) => activo.getAttribute(k) ? `[${k}="${activo.getAttribute(k)}"]` : '').find(Boolean);
   const borrador = fN ? { titulo: fN.titulo.value, fecha: fN.fecha.value, prioridad: fN.prioridad.value, proyecto: fN.proyecto.value, foco: activo && fN.contains(activo) ? activo.name : null } : null;
   app.innerHTML = instalar + `<header><img src="../icon-192.png" alt="JN"><div class="t"><h1>${S.vista === 'hoy' ? 'Hola, Jan' : { semana: 'Semana', tareas: 'Tareas', proyectos: 'Proyectos', carrera: 'Carrera' }[S.vista]}</h1><small>${esc(titulo)}</small></div><button class="estado ${est[0]}" id="refrescar">${esc(est[1])}</button></header>
     <div class="vista">${{ hoy: vHoy, semana: vSemana, tareas: vTareas, proyectos: vProyectos, carrera: vCarrera }[S.vista]()}</div>`;
+  if (selFoco && !$('#hoja') && !(borrador && borrador.foco)) { const v = app.querySelector(selFoco); if (v) v.focus({ preventScroll: true }); }
   const gN = $('#nueva');
   if (borrador && gN) {
     gN.titulo.value = borrador.titulo; gN.fecha.value = borrador.fecha; gN.prioridad.value = borrador.prioridad; gN.proyecto.value = borrador.proyecto;
