@@ -191,7 +191,7 @@ function aplicar(doc, c, ts) {
 
 // ── red: lectura con GET, escritura con POST text/plain (sin preflight); reintentos con espera creciente
 async function api(lote) {
-  const ctrl = new AbortController(), t = setTimeout(() => ctrl.abort(), 45000);
+  const ctrl = new AbortController(), t = setTimeout(() => ctrl.abort(), lote && lote.length > 5 ? 120000 : 60000);
   try {
     const r = lote ? await fetch(CFG.u, { method: 'POST', body: JSON.stringify({ k: CFG.k, op: 'cambios', lote }), headers: { 'Content-Type': 'text/plain;charset=utf-8' }, signal: ctrl.signal, redirect: 'follow' })
       : await fetch(CFG.u + '?k=' + encodeURIComponent(CFG.k) + '&t=' + Date.now(), { signal: ctrl.signal, redirect: 'follow' });
@@ -204,7 +204,7 @@ let enCurso = null, espera = 2000;
 function sincronizar() {
   if (!CFG || enCurso) return enCurso;
   enCurso = (async () => {
-    const lote = S.pend.slice();
+    const lote = S.pend.slice(); enVuelo = lote.length;
     try {
       const j = await api(lote.length ? lote : null);
       S.pend = S.pend.slice(lote.length); guardarLS('cj_pend', S.pend); // solo se quitan los que el servidor confirmó
@@ -214,14 +214,20 @@ function sincronizar() {
     } catch (e) {
       S.estado = navigator.onLine === false ? 'off' : (e.message === 'clave' ? 'clave' : 'err');
       if (S.estado !== 'clave') { setTimeout(sincronizar, espera); espera = Math.min(espera * 2, 120000); }
-    } finally { enCurso = null; pintar(); if (S.pend.length && S.estado === 'ok') sincronizar(); }
+    } finally { enVuelo = 0; enCurso = null; pintar(); if (S.pend.length && S.estado === 'ok') sincronizar(); }
   })();
   return enCurso;
 }
 /** Un cambio: se ve al instante, se guarda en el móvil y se envía (o espera a tener red) */
+/** «Una tarea entera, sola»: los autoguardados seguidos de la misma tarea se pueden juntar en un solo envío */
+const claveSola = (c) => { const cols = Object.keys((c && c.col) || {}); if (cols.length !== 1 || Object.keys(c).some((k) => k !== 'col')) return null;
+  const x = c.col[cols[0]]; return x && (x.set || []).length === 1 && !(x.del || []).length ? cols[0] + ':' + x.set[0].id : null; };
+let enVuelo = 0; // cuántos de los pendientes van ya de camino (esos no se tocan)
 function cambiar(cambios, msg, deshacer) {
-  const ts = Date.now();
-  aplicar(S.doc, cambios, ts); S.pend.push({ ts, cambios });
+  const ts = Date.now(), k = claveSola(cambios), ultimo = S.pend[S.pend.length - 1];
+  aplicar(S.doc, cambios, ts);
+  if (k && S.pend.length > enVuelo && claveSola(ultimo && ultimo.cambios) === k) S.pend[S.pend.length - 1] = { ts, cambios, id: nuevoId() }; // escribir 20 veces la misma tarea = 1 envío
+  else S.pend.push({ ts, cambios, id: nuevoId() });
   guardarLS('cj_doc', S.doc); guardarLS('cj_pend', S.pend);
   pintar(); if (msg) toast(msg, deshacer); sincronizar();
 }
@@ -324,7 +330,7 @@ const aMedias = () => (S.doc.tareas || []).filter((t) => t.estado !== 'hecha' &&
 function filaTarea(t) {
   const hoy = hoyISO(), p = nombreProy(t.proyecto);
   return `<div class="row ${t.estado === 'hecha' ? 'hecha' : ''}"><button class="check ${t.estado === 'hecha' ? 'on' : ''}" data-t="${esc(t.id)}" aria-pressed="${t.estado === 'hecha'}" aria-label="${t.estado === 'hecha' ? 'Hecha: reabrir' : 'Marcar como hecha'} «${esc(t.titulo)}»"></button>
-    <div class="txt" data-abrir="${esc(t.id)}"><div class="tt">${esc(t.titulo)}</div><div class="meta">${p ? `<span class="chip">${esc(p)}</span>` : ''}${t.prioridad === 'alta' ? '<span class="chip alta">alta</span>' : ''}${t.estado !== 'hecha' && t.trabajo && TW.empezado(t.trabajo) ? `<span class="chip">✎ ${Math.round(TW.progreso(t.trabajo) * 100)} %</span>` : ''}${t.trabajo && t.trabajo.archivo ? '<span>📄</span>' : ''}
+    <div class="txt" data-abrir="${esc(t.id)}" role="button" tabindex="0" aria-label="Abrir «${esc(t.titulo)}» para hacerla"><div class="tt">${esc(t.titulo)}</div><div class="meta">${p ? `<span class="chip">${esc(p)}</span>` : ''}${t.prioridad === 'alta' ? '<span class="chip alta">alta</span>' : ''}${t.estado !== 'hecha' && t.trabajo && TW.empezado(t.trabajo) ? `<span class="chip">✎ ${Math.round(TW.progreso(t.trabajo) * 100)} %</span>` : ''}${t.trabajo && t.trabajo.archivo ? '<span>📄</span>' : ''}
     ${t.fecha ? `<span class="${t.fecha < hoy && t.estado !== 'hecha' ? 'chip tarde' : ''}">${t.fecha === hoy ? 'hoy' : t.fecha < hoy ? 'atrasada · ' + esc(t.fecha.slice(5).split('-').reverse().join('/')) : esc(largo(t.fecha))}</span>` : ''}</div></div></div>`;
 }
 function vSemana() {
@@ -366,11 +372,21 @@ function vProyectos() {
 // ── hojas (editar turno, ver proyecto)
 // con una hoja abierta, lo de detrás queda inerte (ni se toca ni lo lee el lector de pantalla): la hoja es un diálogo
 const fondo = (inerte) => ['#app', '#tabs'].forEach((s) => { const el = $(s); if (!el) return; el.inert = inerte; if (inerte) el.setAttribute('aria-hidden', 'true'); else el.removeAttribute('aria-hidden'); });
-function hoja(html) { $('#capa').innerHTML = `<div class="hoja" id="hoja" role="dialog" aria-modal="true"><div class="in">${html}</div></div>`; fondo(true); $('#hoja').addEventListener('click', (e) => { if (e.target.id === 'hoja') cerrar(); }); }
+let focoAntes = null;
+function hoja(html) {
+  if (!$('#hoja')) focoAntes = document.activeElement && document.activeElement.dataset ? document.activeElement : null;
+  $('#capa').innerHTML = `<div class="hoja" id="hoja" role="dialog" aria-modal="true"><div class="in" tabindex="-1">${html}</div></div>`; fondo(true);
+  const h = $('#hoja'), t = h.querySelector('h2'); if (t) { t.id = 'hoja-titulo'; h.setAttribute('aria-labelledby', 'hoja-titulo'); }
+  h.addEventListener('click', (e) => { if (e.target.id === 'hoja') cerrar(); });
+  if (!h.contains(document.activeElement)) h.querySelector('.in').focus({ preventScroll: true });
+}
 const cerrar = () => {
   if (S.trabFlush) { const f = S.trabFlush; S.trabFlush = null; f(); }
   if (S.detFlush) { const f = S.detFlush; S.detFlush = null; f(); } // lo escrito en «Detalles» no se pierde aunque no pulses Guardar
   $('#capa').innerHTML = ''; fondo(false); S.abierto = null;
+  // el foco vuelve al elemento que abrió la hoja (o a su equivalente, si la lista se ha vuelto a pintar)
+  const sel = focoAntes && ['data-abrir', 'data-p', 'data-dia', 'id'].map((k) => focoAntes.getAttribute(k) ? `[${k}="${focoAntes.getAttribute(k)}"]` : '').find(Boolean);
+  const vuelta = sel && $(sel); if (vuelta) vuelta.focus({ preventScroll: true }); focoAntes = null;
 };
 S.tarea = null;
 function hojaTurno(f) {
@@ -587,8 +603,15 @@ function pintar() {
   if (!['hoy', 'semana', 'tareas', 'proyectos', 'carrera'].includes(S.vista)) S.vista = 'hoy';
   const titulo = { hoy: largo(hoyISO()).replace(/^./, (c) => c.toUpperCase()), semana: 'Tus dos semanas', tareas: pendientes().length + ' pendientes', proyectos: 'Avance real de cada proyecto', carrera: 'Redes, métricas y diagnóstico' }[S.vista];
   const instalar = !INSTALADA && /iPhone|iPad/.test(navigator.userAgent) ? `<div class="card" style="border-color:var(--acc)"><b>Instálala:</b> botón Compartir ⬆️ → «Añadir a pantalla de inicio».</div>` : '';
+  const fN = $('#nueva'), activo = document.activeElement;
+  const borrador = fN ? { titulo: fN.titulo.value, fecha: fN.fecha.value, prioridad: fN.prioridad.value, proyecto: fN.proyecto.value, foco: activo && fN.contains(activo) ? activo.name : null } : null;
   app.innerHTML = instalar + `<header><img src="../icon-192.png" alt="JN"><div class="t"><h1>${S.vista === 'hoy' ? 'Hola, Jan' : { semana: 'Semana', tareas: 'Tareas', proyectos: 'Proyectos', carrera: 'Carrera' }[S.vista]}</h1><small>${esc(titulo)}</small></div><button class="estado ${est[0]}" id="refrescar">${esc(est[1])}</button></header>
     <div class="vista">${{ hoy: vHoy, semana: vSemana, tareas: vTareas, proyectos: vProyectos, carrera: vCarrera }[S.vista]()}</div>`;
+  const gN = $('#nueva');
+  if (borrador && gN) {
+    gN.titulo.value = borrador.titulo; gN.fecha.value = borrador.fecha; gN.prioridad.value = borrador.prioridad; gN.proyecto.value = borrador.proyecto;
+    if (borrador.foco && gN[borrador.foco] && !$('#hoja')) gN[borrador.foco].focus();
+  }
   if (S.abierto) hojaProyecto(S.abierto);
 
 }
@@ -606,6 +629,10 @@ document.addEventListener('click', (e) => {
   if (b.dataset.dia) { hojaTurno(b.dataset.dia); return; }
   if (b.dataset.p) { hojaProyecto(b.dataset.p); return; }
 });
+document.addEventListener('keydown', (e) => {
+  const ab = e.target.closest && e.target.closest('div[data-abrir]');
+  if (ab && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); hojaTarea(ab.dataset.abrir); }
+});
 document.addEventListener('submit', (e) => {
   if (e.target.id !== 'nueva') return;
   e.preventDefault(); const fd = new FormData(e.target), titulo = String(fd.get('titulo') || '').trim(); if (!titulo) return;
@@ -614,7 +641,9 @@ document.addEventListener('submit', (e) => {
 
 // siempre conectada: al abrir, al volver a la app, al recuperar la red y cada 2 minutos con la app abierta
 window.addEventListener('online', () => { espera = 2000; sincronizar(); });
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { pintar(); sincronizar(); } });
+const guardarYa = () => { if (S.trabFlush) { const f = S.trabFlush; S.trabFlush = null; f(); } if (S.detFlush) S.detFlush(); };
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { pintar(); sincronizar(); } else guardarYa(); });
+window.addEventListener('pagehide', guardarYa);
 setInterval(() => { if (document.visibilityState === 'visible') sincronizar(); }, 120000);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 pintar(); sincronizar();
