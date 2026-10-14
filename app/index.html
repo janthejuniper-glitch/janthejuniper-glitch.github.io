@@ -430,18 +430,22 @@ function hojaTarea(id) {
     <button class="btn peligro" type="button" id="borrar">Borrar tarea</button><button class="btn" type="button" id="cancelar">Cerrar</button></form>`);
   $('#cancelar').onclick = () => { S.tarea = null; cerrar(); };
   // al cerrar la hoja (Marcar, Terminar, tocar fuera…) se guarda lo escrito en Detalles, sin aviso: solo si cambió algo
+  S.detBase = { notas: t.notas || '', fecha: t.fecha || '', prioridad: t.prioridad || 'media' }; // lo que se cargó en el formulario
   S.detFlush = () => {
-    const f = $('#ftarea'); if (!f) return;
+    const f = $('#ftarea'), base = S.detBase; if (!f || !base) return;
     const ahora = (S.doc.tareas || []).find((x) => x.id === t.id); if (!ahora) return;
-    const d = { notas: String(f.notas.value || ''), fecha: f.fecha.value || null, prioridad: f.prioridad.value || 'media' };
-    if (d.notas === (ahora.notas || '') && d.fecha === (ahora.fecha || null) && d.prioridad === (ahora.prioridad || 'media')) return;
-    setEn('tareas', Object.assign({}, ahora, d))();
+    const mio = {}; // solo lo que TÚ cambiaste respecto a lo cargado; lo que cambió el PC mientras tanto se respeta
+    if (f.notas.value !== base.notas) mio.notas = f.notas.value;
+    if (f.fecha.value !== base.fecha) mio.fecha = f.fecha.value || null;
+    if (f.prioridad.value !== base.prioridad) mio.prioridad = f.prioridad.value || 'media';
+    if (!Object.keys(mio).length) return;
+    S.detBase = { notas: f.notas.value, fecha: f.fecha.value, prioridad: f.prioridad.value };
+    setEn('tareas', Object.assign({}, ahora, mio))();
   };
   $('#hecha').onclick = () => { S.tarea = null; cerrar(); marcar(t); };
   $('#borrar').onclick = () => { S.tarea = null; cerrar(); const antes = JSON.parse(JSON.stringify((S.doc.tareas || []).find((x) => x.id === t.id) || t)); cambiar({ col: { tareas: { set: [], del: [t.id] } } }, 'Tarea borrada', () => setEn('tareas', antes)('Recuperada')); };
-  $('#ftarea').onsubmit = (ev) => { ev.preventDefault(); const fd = new FormData(ev.target); S.tarea = null; S.detFlush = null; cerrar();
-    const ahora = (S.doc.tareas || []).find((x) => x.id === t.id) || t;
-    setEn('tareas', Object.assign({}, ahora, { notas: String(fd.get('notas') || ''), fecha: fd.get('fecha') || null, prioridad: fd.get('prioridad') || 'media' }))('Guardada ✓'); };
+  // «Guardar»: lo mismo que al cerrar (solo lo que cambiaste tú, sin pisar lo que cambió el PC) y un aviso
+  $('#ftarea').onsubmit = (ev) => { ev.preventDefault(); S.tarea = null; cerrar(); toast('Guardada ✓'); };
   conectarTrabajo(t.id);
 }
 
@@ -490,11 +494,12 @@ function htmlTrabajo(t, w) {
 }
 /** Rehace la hoja de la tarea conservando lo escrito en «Detalles» aunque no hayas pulsado Guardar */
 function rehacerHoja(id) {
-  const f = $('#ftarea'), d = f ? { notas: f.notas.value, fecha: f.fecha.value, prioridad: f.prioridad.value } : null;
+  const f = $('#ftarea'), d = f ? { notas: f.notas.value, fecha: f.fecha.value, prioridad: f.prioridad.value } : null, base = S.detBase;
   // el foco vuelve al mismo control (el lector de pantalla no salta al principio de la hoja)
   const a = document.activeElement, sel = a && ['data-fh', 'data-paso', 'data-fq', 'id'].map((k) => a.getAttribute(k) != null && a.getAttribute(k) !== '' ? `[${k}="${a.getAttribute(k)}"]` : '').find(Boolean);
   hojaTarea(id);
-  const g = $('#ftarea'); if (d && g) { g.notas.value = d.notas; g.fecha.value = d.fecha; g.prioridad.value = d.prioridad; }
+  // se conserva solo lo que habías cambiado tú; lo demás muestra lo último (p. ej. una fecha cambiada en el PC)
+  const g = $('#ftarea'); if (d && g && base) { ['notas', 'fecha', 'prioridad'].forEach((k) => { if (d[k] !== base[k]) g[k].value = d[k]; }); S.detBase = Object.assign({}, S.detBase, Object.fromEntries(['notas', 'fecha', 'prioridad'].filter((k) => d[k] !== base[k]).map((k) => [k, base[k]]))); }
   const de = sel && $('#hoja ' + sel); if (de) de.focus(); else if ($('#wfila')) $('#wfila').focus();
 }
 function conectarTrabajo(id) {
@@ -567,13 +572,19 @@ function hojaApple() {
   $('#cancelar').onclick = cerrar;
 }
 
+function rehacerProyecto(id) {
+  const panel = $('#hoja .in'), arriba = panel ? panel.scrollTop : 0, a = document.activeElement, h = a && a.getAttribute && a.getAttribute('data-h');
+  hojaProyecto(id);
+  const p2 = $('#hoja .in'); if (p2) p2.scrollTop = arriba;
+  const de = h && $(`#hoja [data-h="${h}"]`); if (de) de.focus({ preventScroll: true });
+}
 function hojaProyecto(id) {
   const p = (S.doc.proyectos || []).find((x) => x.id === id); if (!p) return cerrar();
   S.abierto = id; const pc = avance(p, S.doc.proyectos);
   hoja(`<h2>${esc(p.nombre)} · ${pc ?? '–'} %</h2>${(p.hitos || []).length ? (p.hitos || []).map((h) => `<button class="hito" data-h="${esc(h.id)}"><span class="check ${h.hecho ? 'on' : ''}"></span><span><b>${esc(h.nombre)}</b><div class="meta">${esc(h.criterio || '')}</div></span><span class="pz">${pesoReal(p, h, S.doc.proyectos || [])}%</span></button>`).join('') : '<div class="vacio">Sin hitos: es un proyecto de ideas.</div>'}
     <div class="btns"><button class="btn" id="cerrar">Cerrar</button></div>`);
   $('#cerrar').onclick = cerrar;
-  document.querySelectorAll('#hoja [data-h]').forEach((b) => { b.onclick = () => { hito((S.doc.proyectos || []).find((x) => x.id === id), { id: b.dataset.h, nombre: b.querySelector('b').textContent, peso: +b.querySelector('.pz').textContent.replace('%', '') }); hojaProyecto(id); }; });
+  document.querySelectorAll('#hoja [data-h]').forEach((b) => { b.onclick = () => { hito((S.doc.proyectos || []).find((x) => x.id === id), { id: b.dataset.h, nombre: b.querySelector('b').textContent, peso: +b.querySelector('.pz').textContent.replace('%', '') }); rehacerProyecto(id); }; });
 }
 
 let tToast;
@@ -612,7 +623,7 @@ function pintar() {
     gN.titulo.value = borrador.titulo; gN.fecha.value = borrador.fecha; gN.prioridad.value = borrador.prioridad; gN.proyecto.value = borrador.proyecto;
     if (borrador.foco && gN[borrador.foco] && !$('#hoja')) gN[borrador.foco].focus();
   }
-  if (S.abierto) hojaProyecto(S.abierto);
+  if (S.abierto) rehacerProyecto(S.abierto);
 
 }
 
@@ -636,6 +647,7 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('submit', (e) => {
   if (e.target.id !== 'nueva') return;
   e.preventDefault(); const fd = new FormData(e.target), titulo = String(fd.get('titulo') || '').trim(); if (!titulo) return;
+  e.target.titulo.value = ''; // vacío antes de repintar: el borrador que se conserva ya no lleva el título añadido
   setEn('tareas', { id: nuevoId(), titulo, proyecto: fd.get('proyecto') || null, hito: null, estado: 'pendiente', fecha: fd.get('fecha') || null, prioridad: fd.get('prioridad') || 'media', creada: hoyISO() })('Tarea añadida ✓');
 });
 
