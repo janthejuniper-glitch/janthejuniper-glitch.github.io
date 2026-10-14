@@ -367,7 +367,11 @@ function vProyectos() {
 // con una hoja abierta, lo de detrás queda inerte (ni se toca ni lo lee el lector de pantalla): la hoja es un diálogo
 const fondo = (inerte) => ['#app', '#tabs'].forEach((s) => { const el = $(s); if (!el) return; el.inert = inerte; if (inerte) el.setAttribute('aria-hidden', 'true'); else el.removeAttribute('aria-hidden'); });
 function hoja(html) { $('#capa').innerHTML = `<div class="hoja" id="hoja" role="dialog" aria-modal="true"><div class="in">${html}</div></div>`; fondo(true); $('#hoja').addEventListener('click', (e) => { if (e.target.id === 'hoja') cerrar(); }); }
-const cerrar = () => { if (S.trabFlush) { const f = S.trabFlush; S.trabFlush = null; f(); } $('#capa').innerHTML = ''; fondo(false); S.abierto = null; };
+const cerrar = () => {
+  if (S.trabFlush) { const f = S.trabFlush; S.trabFlush = null; f(); }
+  if (S.detFlush) { const f = S.detFlush; S.detFlush = null; f(); } // lo escrito en «Detalles» no se pierde aunque no pulses Guardar
+  $('#capa').innerHTML = ''; fondo(false); S.abierto = null;
+};
 S.tarea = null;
 function hojaTurno(f) {
   // cada turno del día por separado (turno partido incluido): cambiar horas, quitar uno, o añadir otro
@@ -409,9 +413,17 @@ function hojaTarea(id) {
     <button class="btn" type="button" id="hecha">${t.estado === 'hecha' ? '↺ Reabrir' : '✓ Marcar como hecha'}</button>
     <button class="btn peligro" type="button" id="borrar">Borrar tarea</button><button class="btn" type="button" id="cancelar">Cerrar</button></form>`);
   $('#cancelar').onclick = () => { S.tarea = null; cerrar(); };
+  // al cerrar la hoja (Marcar, Terminar, tocar fuera…) se guarda lo escrito en Detalles, sin aviso: solo si cambió algo
+  S.detFlush = () => {
+    const f = $('#ftarea'); if (!f) return;
+    const ahora = (S.doc.tareas || []).find((x) => x.id === t.id); if (!ahora) return;
+    const d = { notas: String(f.notas.value || ''), fecha: f.fecha.value || null, prioridad: f.prioridad.value || 'media' };
+    if (d.notas === (ahora.notas || '') && d.fecha === (ahora.fecha || null) && d.prioridad === (ahora.prioridad || 'media')) return;
+    setEn('tareas', Object.assign({}, ahora, d))();
+  };
   $('#hecha').onclick = () => { S.tarea = null; cerrar(); marcar(t); };
   $('#borrar').onclick = () => { S.tarea = null; cerrar(); const antes = JSON.parse(JSON.stringify((S.doc.tareas || []).find((x) => x.id === t.id) || t)); cambiar({ col: { tareas: { set: [], del: [t.id] } } }, 'Tarea borrada', () => setEn('tareas', antes)('Recuperada')); };
-  $('#ftarea').onsubmit = (ev) => { ev.preventDefault(); const fd = new FormData(ev.target); S.tarea = null; cerrar();
+  $('#ftarea').onsubmit = (ev) => { ev.preventDefault(); const fd = new FormData(ev.target); S.tarea = null; S.detFlush = null; cerrar();
     const ahora = (S.doc.tareas || []).find((x) => x.id === t.id) || t;
     setEn('tareas', Object.assign({}, ahora, { notas: String(fd.get('notas') || ''), fecha: fd.get('fecha') || null, prioridad: fd.get('prioridad') || 'media' }))('Guardada ✓'); };
   conectarTrabajo(t.id);
@@ -500,9 +512,9 @@ function conectarTrabajo(id) {
   });
   const fin = $('#wterminar'); if (fin) fin.addEventListener('click', () => {
     guardarTrabajo(id, true);
-    const t = (S.doc.tareas || []).find((x) => x.id === id); if (!t) return;
     const trabajo = Object.assign({}, S.w, { acabado: hoyISO(), actualizado: new Date().toISOString() });
-    S.tarea = null; S.w = null; cerrar();
+    S.tarea = null; S.w = null; cerrar(); // primero se guarda todo (también Detalles)…
+    const t = (S.doc.tareas || []).find((x) => x.id === id); if (!t) return; // …y se termina sobre la tarea ya al día
     const cambio = { col: { tareas: { set: [Object.assign({}, t, { estado: 'hecha', hecha_en: hoyISO(), trabajo })], del: [] } } };
     if (trabajo.tipo === 'fotos' && (trabajo.fotos || []).length) { // las elegidas quedan marcadas para prensa (igual que en el PC)
       const tags = S.doc.galeria_tags || {}, set = {};
@@ -552,7 +564,7 @@ let tToast;
 function toast(msg, deshacer) {
   clearTimeout(tToast);
   let t = $('#toast'); if (t) t.remove();
-  document.body.insertAdjacentHTML('beforeend', `<div class="toast" id="toast"><span>${esc(msg)}</span>${deshacer ? '<button id="undo">Deshacer</button>' : ''}</div>`);
+  document.body.insertAdjacentHTML('beforeend', `<div class="toast" id="toast" role="status" aria-live="polite"><span>${esc(msg)}</span>${deshacer ? '<button id="undo">Deshacer</button>' : ''}</div>`);
   if (deshacer) $('#undo').onclick = () => { $('#toast').remove(); deshacer(); };
   tToast = setTimeout(() => { const x = $('#toast'); if (x) x.remove(); }, deshacer ? 6000 : 2200);
 }
