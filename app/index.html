@@ -323,7 +323,7 @@ function vHoy() {
 const aMedias = () => (S.doc.tareas || []).filter((t) => t.estado !== 'hecha' && t.trabajo && TW.empezado(t.trabajo)).sort((a, b) => (b.trabajo.actualizado || '').localeCompare(a.trabajo.actualizado || '')).slice(0, 3);
 function filaTarea(t) {
   const hoy = hoyISO(), p = nombreProy(t.proyecto);
-  return `<div class="row ${t.estado === 'hecha' ? 'hecha' : ''}"><button class="check ${t.estado === 'hecha' ? 'on' : ''}" data-t="${esc(t.id)}" aria-label="Marcar"></button>
+  return `<div class="row ${t.estado === 'hecha' ? 'hecha' : ''}"><button class="check ${t.estado === 'hecha' ? 'on' : ''}" data-t="${esc(t.id)}" aria-pressed="${t.estado === 'hecha'}" aria-label="${t.estado === 'hecha' ? 'Hecha: reabrir' : 'Marcar como hecha'} «${esc(t.titulo)}»"></button>
     <div class="txt" data-abrir="${esc(t.id)}"><div class="tt">${esc(t.titulo)}</div><div class="meta">${p ? `<span class="chip">${esc(p)}</span>` : ''}${t.prioridad === 'alta' ? '<span class="chip alta">alta</span>' : ''}${t.estado !== 'hecha' && t.trabajo && TW.empezado(t.trabajo) ? `<span class="chip">✎ ${Math.round(TW.progreso(t.trabajo) * 100)} %</span>` : ''}${t.trabajo && t.trabajo.archivo ? '<span>📄</span>' : ''}
     ${t.fecha ? `<span class="${t.fecha < hoy && t.estado !== 'hecha' ? 'chip tarde' : ''}">${t.fecha === hoy ? 'hoy' : t.fecha < hoy ? 'atrasada · ' + esc(t.fecha.slice(5).split('-').reverse().join('/')) : esc(largo(t.fecha))}</span>` : ''}</div></div></div>`;
 }
@@ -442,11 +442,11 @@ function htmlTrabajo(t, w) {
   if (w.tipo === 'texto') cuerpo = (w.secciones || []).map((s, i) => `<label class="wsec"><span class="label">${esc(s.titulo)}${s.max ? `<span class="cont ${(s.texto || '').length > s.max ? 'mal' : ''}" data-cont="${i}">${(s.texto || '').length} / ${s.max}</span>` : ''}</span>
       <textarea class="inp" rows="${Math.min(10, Math.max(3, Math.ceil((s.max || 600) / 200)))}" data-sec="${i}" placeholder="Escribe aquí… (se guarda solo)">${esc(s.texto || '')}</textarea>
       <span><button type="button" class="btn" data-copiar="${i}">Copiar</button></span></label>`).join('');
-  if (w.tipo === 'lista') cuerpo = `<p class="label">${esc(g.columnas[0])} · ${esc(g.columnas[1])}</p>` + (w.filas || []).map((f, i) => `<div class="wfila"><button type="button" class="check ${f.hecho ? 'on' : ''}" data-fh="${i}" aria-label="Marcar"></button>
+  if (w.tipo === 'lista') cuerpo = `<p class="label">${esc(g.columnas[0])} · ${esc(g.columnas[1])}</p>` + (w.filas || []).map((f, i) => `<div class="wfila"><button type="button" class="check ${f.hecho ? 'on' : ''}" data-fh="${i}" aria-pressed="${!!f.hecho}" aria-label="${f.hecho ? 'Hecho' : 'Marcar'}: ${esc(f.a || 'fila ' + (i + 1))}"></button>
       <input class="inp" data-fa="${i}" value="${esc(f.a)}" aria-label="${esc(g.columnas[0])}"><input class="inp" data-fb="${i}" value="${esc(f.b)}" aria-label="${esc(g.columnas[1])}" ${g.importe ? 'inputmode="decimal"' : ''}>
       <button type="button" class="btn" data-fq="${i}" aria-label="Quitar fila">✕</button></div>`).join('')
     + `<button type="button" class="btn" id="wfila">+ Añadir</button>${g.importe ? `<div class="meta" id="wtotal" style="margin-top:8px">Total: ${Math.round(totalLista(w))} €</div>` : ''}`;
-  if (w.tipo === 'fuera') cuerpo = (w.pasos || []).map((x, i) => `<button type="button" class="hito" data-paso="${i}"><span class="check ${x.hecho ? 'on' : ''}"></span><span>${esc(x.texto)}</span></button>`).join('')
+  if (w.tipo === 'fuera') cuerpo = (w.pasos || []).map((x, i) => `<button type="button" class="hito" data-paso="${i}" aria-pressed="${!!x.hecho}"><span class="check ${x.hecho ? 'on' : ''}" aria-hidden="true"></span><span>${esc(x.texto)}</span></button>`).join('')
     + `<label class="wsec" style="margin-top:8px"><span class="label">Enlace o justificante</span><input class="inp" data-just value="${esc(w.justificante || '')}" placeholder="Pega aquí el enlace o el nº de registro"></label>`;
   if (w.tipo === 'escucha') cuerpo = `<label class="wsec"><span class="label">Notas de la escucha</span><textarea class="inp" rows="4" data-campo="notas" placeholder="Qué suena bien, qué cambiarías…">${esc(w.notas || '')}</textarea></label>
     <label class="wsec"><span class="label">Decisión</span><textarea class="inp" rows="2" data-campo="decision" placeholder="Qué haces al final">${esc(w.decision || '')}</textarea></label>
@@ -463,8 +463,11 @@ function htmlTrabajo(t, w) {
 /** Rehace la hoja de la tarea conservando lo escrito en «Detalles» aunque no hayas pulsado Guardar */
 function rehacerHoja(id) {
   const f = $('#ftarea'), d = f ? { notas: f.notas.value, fecha: f.fecha.value, prioridad: f.prioridad.value } : null;
+  // el foco vuelve al mismo control (el lector de pantalla no salta al principio de la hoja)
+  const a = document.activeElement, sel = a && ['data-fh', 'data-paso', 'data-fq', 'id'].map((k) => a.getAttribute(k) != null && a.getAttribute(k) !== '' ? `[${k}="${a.getAttribute(k)}"]` : '').find(Boolean);
   hojaTarea(id);
   const g = $('#ftarea'); if (d && g) { g.notas.value = d.notas; g.fecha.value = d.fecha; g.prioridad.value = d.prioridad; }
+  const de = sel && $('#hoja ' + sel); if (de) de.focus(); else if ($('#wfila')) $('#wfila').focus();
 }
 function conectarTrabajo(id) {
   const w = S.w, hoja = $('#hoja'); if (!hoja || !w) return;
@@ -500,7 +503,13 @@ function conectarTrabajo(id) {
     const t = (S.doc.tareas || []).find((x) => x.id === id); if (!t) return;
     const trabajo = Object.assign({}, S.w, { acabado: hoyISO(), actualizado: new Date().toISOString() });
     S.tarea = null; S.w = null; cerrar();
-    setEn('tareas', Object.assign({}, t, { estado: 'hecha', hecha_en: hoyISO(), trabajo }))('¡Hecho! ✓ Se guarda en tu biblioteca');
+    const cambio = { col: { tareas: { set: [Object.assign({}, t, { estado: 'hecha', hecha_en: hoyISO(), trabajo })], del: [] } } };
+    if (trabajo.tipo === 'fotos' && (trabajo.fotos || []).length) { // las elegidas quedan marcadas para prensa (igual que en el PC)
+      const tags = S.doc.galeria_tags || {}, set = {};
+      trabajo.fotos.forEach((f) => { set[f] = Object.assign({}, tags[f], { prensa: true }); });
+      cambio.obj = { galeria_tags: { set, del: [] } };
+    }
+    cambiar(cambio, '¡Hecho! ✓ Se guarda en tu biblioteca');
   });
 }
 // ── Conectar con Apple: el Calendario va solo (cuenta de Google en Ajustes); Recordatorios, con un Atajo que lee tu API
