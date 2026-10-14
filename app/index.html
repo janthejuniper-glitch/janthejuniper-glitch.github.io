@@ -228,12 +228,18 @@ const hace = (ms) => { if (!ms) return 'sin datos'; const m = Math.round((Date.n
 // ── lógica del centro (igual que en el PC)
 function avance(p, todos) {
   if (p.tipo === 'bocetos') return null;
-  if (p.estado === 'publicado') return 100; // su material ya está fuera
   const propio = (p.hitos || []).reduce((a, h) => a + (h.hecho ? h.peso : 0), 0);
   if (p.tipo !== 'ep') return propio;
   const c = todos.filter((x) => x.ep === p.id);
-  const media = c.length ? c.reduce((a, x) => a + (avance(x, todos) || 0), 0) / c.length : 0;
+  // EP sin canciones registradas (p. ej. el 999): sus propios hitos valen el 100 %
+  if (!c.length) { const total = (p.hitos || []).reduce((a, h) => a + h.peso, 0); return total ? Math.round((propio * 100) / total) : 0; }
+  const media = c.reduce((a, x) => a + (avance(x, todos) || 0), 0) / c.length;
   return Math.round(media * 0.7 + propio);
+}
+// lo que suma de verdad un hito al % que se ve (así los hitos de un proyecto siempre suman 100)
+function pesoReal(p, h, todos) {
+  if (p.tipo === 'ep' && !todos.some((x) => x.ep === p.id)) { const total = (p.hitos || []).reduce((a, x) => a + x.peso, 0) || 1; return Math.round((h.peso * 100) / total); }
+  return h.peso;
 }
 const sigHito = (p) => (p.hitos || []).find((h) => !h.hecho) || null;
 function importancia(t, proys, hoy) {
@@ -326,7 +332,7 @@ function vProyectos() {
   return `<div class="card"><p class="label">Tus proyectos</p>${prs.sort((a, b) => (orden[a.estado] ?? 3) - (orden[b.estado] ?? 3)).map((p) => {
     const pc = avance(p, S.doc.proyectos), h = sigHito(p);
     return `<button class="proy" data-p="${esc(p.id)}"><div class="ring" style="--p:${pc ?? 0};--c:${esc(p.color || '#9d4dff')}"><b>${pc ?? '–'}</b></div><div style="min-width:0"><div class="nm">${esc(p.nombre)}</div>
-      <div class="sg">${p.estado !== 'activo' ? esc(p.estado) + ' · ' : ''}${h ? '→ ' + esc(h.nombre) + ' · +' + h.peso + ' %' : p.tipo === 'bocetos' ? 'Ideas y bocetos' : 'Completo'}</div></div></button>`;
+      <div class="sg">${p.estado !== 'activo' ? esc(p.estado) + ' · ' : ''}${h ? '→ ' + esc(h.nombre) + ' · +' + pesoReal(p, h, S.doc.proyectos) + ' %' : p.tipo === 'bocetos' ? 'Ideas y bocetos' : 'Completo'}</div></div></button>`;
   }).join('')}</div>`;
 }
 
@@ -365,7 +371,7 @@ function hojaTarea(id) {
   const t = (S.doc.tareas || []).find((x) => x.id === id); if (!t) { S.tarea = null; return cerrar(); }
   S.tarea = id; const p = (S.doc.proyectos || []).find((x) => x.id === t.proyecto), h = p && (p.hitos || []).find((x) => x.id === t.hito);
   hoja(`<h2>${esc(t.titulo)}</h2><div class="meta" style="margin:-6px 0 12px">${p ? `<span class="chip">${esc(p.nombre)}</span>` : 'Carrera y redes'}${t.estado === 'hecha' ? ' · hecha' : ''}</div>
-    ${h ? `<div class="card" style="margin-bottom:10px"><p class="label">Cuenta para</p><b>${esc(h.nombre)} · +${h.peso} %</b><div class="meta">Hecho cuando: ${esc(h.criterio || '')}</div></div>` : ''}
+    ${h ? `<div class="card" style="margin-bottom:10px"><p class="label">Cuenta para</p><b>${esc(h.nombre)} · +${pesoReal(p, h, S.doc.proyectos || [])} %</b><div class="meta">Hecho cuando: ${esc(h.criterio || '')}</div></div>` : ''}
     <form class="nueva" id="ftarea"><label><span class="label">Notas</span><textarea class="inp" name="notas" rows="4" placeholder="Lo que necesites recordar…">${esc(t.notas || '')}</textarea></label>
     <div class="fila"><input class="inp" type="date" name="fecha" value="${esc(t.fecha || '')}"><select class="inp" name="prioridad">${['alta', 'media', 'baja'].map((x) => `<option value="${x}" ${t.prioridad === x ? 'selected' : ''}>Prioridad ${x}</option>`).join('')}</select></div>
     <button class="btn pri" type="submit">Guardar</button>
@@ -380,7 +386,7 @@ function hojaTarea(id) {
 function hojaProyecto(id) {
   const p = (S.doc.proyectos || []).find((x) => x.id === id); if (!p) return cerrar();
   S.abierto = id; const pc = avance(p, S.doc.proyectos);
-  hoja(`<h2>${esc(p.nombre)} · ${pc ?? '–'} %</h2>${(p.hitos || []).length ? (p.hitos || []).map((h) => `<button class="hito" data-h="${esc(h.id)}"><span class="check ${h.hecho ? 'on' : ''}"></span><span><b>${esc(h.nombre)}</b><div class="meta">${esc(h.criterio || '')}</div></span><span class="pz">${h.peso}%</span></button>`).join('') : '<div class="vacio">Sin hitos: es un proyecto de ideas.</div>'}
+  hoja(`<h2>${esc(p.nombre)} · ${pc ?? '–'} %</h2>${(p.hitos || []).length ? (p.hitos || []).map((h) => `<button class="hito" data-h="${esc(h.id)}"><span class="check ${h.hecho ? 'on' : ''}"></span><span><b>${esc(h.nombre)}</b><div class="meta">${esc(h.criterio || '')}</div></span><span class="pz">${pesoReal(p, h, S.doc.proyectos || [])}%</span></button>`).join('') : '<div class="vacio">Sin hitos: es un proyecto de ideas.</div>'}
     <div class="btns"><button class="btn" id="cerrar">Cerrar</button></div>`);
   $('#cerrar').onclick = cerrar;
   document.querySelectorAll('#hoja [data-h]').forEach((b) => { b.onclick = () => { hito((S.doc.proyectos || []).find((x) => x.id === id), { id: b.dataset.h, nombre: b.querySelector('b').textContent, peso: +b.querySelector('.pz').textContent.replace('%', '') }); hojaProyecto(id); }; });
