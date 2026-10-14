@@ -104,7 +104,7 @@
   /** mailto: con el asunto y el correo escritos en el trabajo */
   /** «1.500,00 €», «1500.5», «300» → número (formato español incluido); lo que no es un número → 0 */
   function numero(x) {
-    var s = String(x == null ? '' : x).replace(/[€\s]/g, '')
+    var s = (String(x == null ? '' : x).replace(/[€\s]/g, '').match(/-?[\d.,]*\d/) || [''])[0] // el número que escribiste, aunque lleve «aprox» detrás
     if (s.indexOf(',') >= 0) s = s.replace(/\./g, '').replace(',', '.')
     else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '') // «1.500», «1.234.567»: puntos de miles
     var n = parseFloat(s)

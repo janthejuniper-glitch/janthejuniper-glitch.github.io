@@ -364,8 +364,10 @@ function vProyectos() {
 }
 
 // ── hojas (editar turno, ver proyecto)
-function hoja(html) { $('#capa').innerHTML = `<div class="hoja" id="hoja"><div class="in">${html}</div></div>`; $('#hoja').addEventListener('click', (e) => { if (e.target.id === 'hoja') cerrar(); }); }
-const cerrar = () => { if (S.trabFlush) { const f = S.trabFlush; S.trabFlush = null; f(); } $('#capa').innerHTML = ''; S.abierto = null; };
+// con una hoja abierta, lo de detrás queda inerte (ni se toca ni lo lee el lector de pantalla): la hoja es un diálogo
+const fondo = (inerte) => ['#app', '#tabs'].forEach((s) => { const el = $(s); if (!el) return; el.inert = inerte; if (inerte) el.setAttribute('aria-hidden', 'true'); else el.removeAttribute('aria-hidden'); });
+function hoja(html) { $('#capa').innerHTML = `<div class="hoja" id="hoja" role="dialog" aria-modal="true"><div class="in">${html}</div></div>`; fondo(true); $('#hoja').addEventListener('click', (e) => { if (e.target.id === 'hoja') cerrar(); }); }
+const cerrar = () => { if (S.trabFlush) { const f = S.trabFlush; S.trabFlush = null; f(); } $('#capa').innerHTML = ''; fondo(false); S.abierto = null; };
 S.tarea = null;
 function hojaTurno(f) {
   // cada turno del día por separado (turno partido incluido): cambiar horas, quitar uno, o añadir otro
@@ -458,9 +460,15 @@ function htmlTrabajo(t, w) {
     <div class="btns"><select class="inp" id="wtipo" style="width:auto" aria-label="Tipo de trabajo" ${hecha ? 'disabled' : ''}>${Object.keys(TW.NOMBRES).map((k) => `<option value="${k}" ${k === w.tipo ? 'selected' : ''}>${esc(TW.NOMBRES[k])}</option>`).join('')}</select>
     ${hecha ? '' : '<button type="button" class="btn pri" id="wterminar">✓ Terminar y guardar</button>'}</div></div>`;
 }
+/** Rehace la hoja de la tarea conservando lo escrito en «Detalles» aunque no hayas pulsado Guardar */
+function rehacerHoja(id) {
+  const f = $('#ftarea'), d = f ? { notas: f.notas.value, fecha: f.fecha.value, prioridad: f.prioridad.value } : null;
+  hojaTarea(id);
+  const g = $('#ftarea'); if (d && g) { g.notas.value = d.notas; g.fecha.value = d.fecha; g.prioridad.value = d.prioridad; }
+}
 function conectarTrabajo(id) {
   const w = S.w, hoja = $('#hoja'); if (!hoja || !w) return;
-  const rehacer = () => { guardarTrabajo(id, true); hojaTarea(id); };
+  const rehacer = () => { guardarTrabajo(id, true); rehacerHoja(id); };
   hoja.querySelectorAll('[data-sec]').forEach((ta) => ta.addEventListener('input', () => {
     const i = +ta.dataset.sec; w.secciones[i].texto = ta.value; w.secciones[i].editado = true;
     const c = hoja.querySelector(`[data-cont="${i}"]`); if (c) { c.textContent = ta.value.length + ' / ' + w.secciones[i].max; c.classList.toggle('mal', ta.value.length > w.secciones[i].max); }
@@ -484,7 +492,7 @@ function conectarTrabajo(id) {
   hoja.querySelectorAll('a[data-atajo="correo"]').forEach((a) => a.addEventListener('click', () => { a.href = TW.mailto(w); guardarTrabajo(id, true); }));
   const tp = $('#wtipo'); if (tp) tp.addEventListener('change', () => {
     const t = (S.doc.tareas || []).find((x) => x.id === id); if (!t) return;
-    const antes = w.tipo; S.w = TW.cambiarTipo(t, w, tp.value); guardarTrabajo(id, true); hojaTarea(id);
+    const antes = w.tipo; S.w = TW.cambiarTipo(t, w, tp.value); guardarTrabajo(id, true); rehacerHoja(id);
     toast('Lo que tenías sigue guardado: vuelve a «' + TW.NOMBRES[antes] + '» para verlo');
   });
   const fin = $('#wterminar'); if (fin) fin.addEventListener('click', () => {
@@ -508,10 +516,10 @@ function hojaApple() {
       <div class="meta">Desde ahí, lo que añadas en el centro, el bot o esta app aparece solo en el Calendario de Apple, con su aviso.</div></div>
     <div class="card"><p class="label">2 · Recordatorios (unos 10 minutos, una sola vez)</p>
       ${paso(1, 'En <b>Recordatorios</b>, crea una lista llamada <b>Centro JAN</b>.')}
-      ${paso(2, 'En <b>Atajos</b> → <b>+</b> → nombre «Centro JAN → Recordatorios». Añade <b>Obtener contenido de URL</b> y pega la <b>dirección A</b>.')}
-      ${paso(3, '<b>Dividir texto</b> por «Nuevas líneas» → <b>Repetir con cada elemento</b> → dentro: <b>Dividir texto</b> por «Personalizado: ¦».')}
+      ${paso(2, 'En <b>Atajos</b> → <b>+</b> → nombre «Centro JAN → Recordatorios». <b>Primero</b>, lo que ya completaste: <b>Buscar recordatorios</b> de la lista Centro JAN, completados, en los últimos 2 días → <b>Repetir con cada</b> → <b>Obtener contenido de URL</b>: <b>dirección B</b> + las notas del recordatorio + «&cuando=» + su fecha de completado.')}
+      ${paso(3, '<b>Después</b>, los cambios: <b>Obtener contenido de URL</b> con la <b>dirección A</b> → <b>Dividir texto</b> por «Nuevas líneas» → <b>Repetir con cada elemento</b> → dentro: <b>Dividir texto</b> por «Personalizado: ¦».')}
       ${paso(4, 'Dentro del bucle: <b>Buscar recordatorios</b> donde Notas contiene el elemento 2 → <b>Eliminar recordatorios</b>. Después <b>Si</b> el elemento 1 es «+»: <b>Añadir recordatorio</b> (título = elemento 3, lista Centro JAN, alerta = elemento 4, notas = elemento 2).')}
-      ${paso(5, 'Al final: <b>Buscar recordatorios</b> de la lista Centro JAN, completados, en los últimos 2 días → <b>Repetir</b> → <b>Obtener contenido de URL</b>: <b>dirección B</b> + las notas del recordatorio + «&cuando=» + su fecha de completado.')}
+      ${paso(5, 'Cada cambio llega dos veces seguidas a propósito (por si una vez se corta la red): como borra por id antes de crear, nunca verás duplicados.')}
       ${paso(6, 'En <b>Automatización</b> → <b>Hora del día</b> (8:00, 14:00 y 20:00) y <b>Al abrir la app Recordatorios</b> → ejecuta el atajo, con <b>Ejecutar inmediatamente</b>.')}
       <div class="btns"><button class="btn pri" type="button" id="copiaA">Copiar dirección A</button><button class="btn" type="button" id="copiaB">Copiar dirección B</button><button class="btn" type="button" id="copiaT">Copiar A (reenviar todo)</button></div>
       <div class="meta">Las direcciones llevan tu clave privada: no las compartas. «Reenviar todo» sirve si borras la lista y quieres rehacerla.</div></div>
