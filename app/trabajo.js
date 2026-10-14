@@ -106,7 +106,7 @@
   function numero(x) {
     var s = String(x == null ? '' : x).replace(/[€\s]/g, '')
     if (s.indexOf(',') >= 0) s = s.replace(/\./g, '').replace(',', '.')
-    else if ((s.match(/\./g) || []).length > 1) s = s.replace(/\./g, '')
+    else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '') // «1.500», «1.234.567»: puntos de miles
     var n = parseFloat(s)
     return isFinite(n) ? n : 0
   }
