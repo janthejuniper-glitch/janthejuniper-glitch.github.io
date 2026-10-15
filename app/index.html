@@ -168,11 +168,17 @@ const S = { doc: leerLS('cj_doc', null), diag: leerLS('cj_diag', {}), pend: leer
 // ── mismo algoritmo de fusión que el PC y Apps Script (colecciones por id, objetos por clave)
 /** Igual que en el PC y en Apps Script: con `_campos` solo se sustituyen esos campos */
 function mezclar(previo, x, ts) {
-  const limpio = Object.assign({}, x); delete limpio._campos;
-  if (!previo || !Array.isArray(x._campos)) return Object.assign(limpio, { act: ts });
-  const out = Object.assign({}, previo);
-  x._campos.forEach((k) => { if (k === 'id' || k === 'act') return; if (k in limpio) out[k] = limpio[k]; else delete out[k]; });
-  out.act = ts;
+  const limpio = Object.assign({}, x); delete limpio._campos; delete limpio._acts; delete limpio._base;
+  if (!previo || !Array.isArray(x._campos)) return Object.assign(limpio, { act: ts, _base: ts });
+  const out = Object.assign({}, previo), acts = Object.assign({}, previo._acts || {});
+  const base = previo._base != null ? previo._base : (previo.act || 0);
+  x._campos.forEach((k) => {
+    if (['id', 'act', '_acts', '_base', '_campos'].includes(k)) return;
+    if (ts < (acts[k] != null ? acts[k] : base)) return; // ese campo se cambió después en otro sitio: gana el más nuevo
+    if (k in limpio) out[k] = limpio[k]; else delete out[k];
+    acts[k] = ts;
+  });
+  out._acts = acts; out._base = base; out.act = Math.max(previo.act || 0, ts);
   return out;
 }
 /** Qué campos cambias de verdad (respecto a lo que tienes): solo esos viajan como cambio */
@@ -181,7 +187,7 @@ function conCampos(cambios) {
     const actual = S.doc && S.doc[col] || [];
     cambios.col[col].set = (cambios.col[col].set || []).map((x) => {
       const y = actual.find((e) => e.id === x.id); if (!y || Array.isArray(x._campos)) return x;
-      const campos = [...new Set([...Object.keys(x), ...Object.keys(y)])].filter((k) => k !== 'act' && k !== '_campos' && JSON.stringify(x[k]) !== JSON.stringify(y[k]));
+      const campos = [...new Set([...Object.keys(x), ...Object.keys(y)])].filter((k) => !['act', '_campos', '_acts', '_base'].includes(k) && JSON.stringify(x[k]) !== JSON.stringify(y[k]));
       return Object.assign({}, x, { _campos: campos });
     });
   });
@@ -196,7 +202,7 @@ function aplicar(doc, c, ts) {
     (c.col[col].set || []).forEach((x) => {
       if (!x || x.id == null) return;
       if ((doc.borrados[col + ':' + x.id] || 0) > ts) return; // se borró después: no resucita
-      if (x.id in pos) { if ((arr[pos[x.id]].act || 0) <= ts) arr[pos[x.id]] = mezclar(arr[pos[x.id]], x, ts); } else { pos[x.id] = arr.length; arr.push(mezclar(null, x, ts)); }
+      if (x.id in pos) { if (Array.isArray(x._campos) || (arr[pos[x.id]].act || 0) <= ts) arr[pos[x.id]] = mezclar(arr[pos[x.id]], x, ts); } else { pos[x.id] = arr.length; arr.push(mezclar(null, x, ts)); }
     });
     const del = c.col[col].del || [];
     if (del.length) { doc[col] = arr.filter((x) => !del.includes(x.id) || (x.act || 0) > ts); del.forEach((id) => { doc.borrados[col + ':' + id] = Math.max(ts, doc.borrados[col + ':' + id] || 0); }); }
