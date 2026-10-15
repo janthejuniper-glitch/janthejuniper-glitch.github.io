@@ -166,45 +166,72 @@ const S = { doc: leerLS('cj_doc', null), diag: leerLS('cj_diag', {}), pend: leer
   estado: 'cargando', ultima: leerLS('cj_ultima', null), abierto: null };
 
 // ── mismo algoritmo de fusión que el PC y Apps Script (colecciones por id, objetos por clave)
-/** Igual que fusion.js: «campo», «campo#id» (elemento de una lista por su id) o «campo.clave» */
-function aplicarRuta(out, nuevo, ruta) {
-  const a = ruta.indexOf('#'), p = ruta.indexOf('.');
-  if (a > 0 && (p < 0 || a < p)) {
-    const k = ruta.slice(0, a), id = ruta.slice(a + 1), arr = Array.isArray(out[k]) ? out[k].slice() : [];
-    const el = (Array.isArray(nuevo[k]) ? nuevo[k] : []).find((e) => e && String(e.id) === id), i = arr.findIndex((e) => e && String(e.id) === id);
-    if (el) { if (i >= 0) arr[i] = el; else arr.push(el); } else if (i >= 0) arr.splice(i, 1);
-    out[k] = arr;
-  } else if (p > 0) {
-    const k = ruta.slice(0, p), s = ruta.slice(p + 1), obj = Object.assign({}, out[k] && typeof out[k] === 'object' ? out[k] : {});
-    if (nuevo[k] && typeof nuevo[k] === 'object' && s in nuevo[k]) obj[s] = nuevo[k][s]; else delete obj[s];
-    out[k] = obj;
-  } else if (ruta in nuevo) out[ruta] = nuevo[ruta];
-  else delete out[ruta];
-}
-/** Qué rutas cambian (igual que en el PC): por id en listas con id (hitos#h1) y por clave en objetos (trabajo.secciones) */
-function camposDe(antes, ahora) {
-  const fuera = ['act', '_campos', '_acts', '_base'], igual = (a, b) => JSON.stringify(a) === JSON.stringify(b), out = [];
-  const conId = (v) => Array.isArray(v) && v.every((e) => e && typeof e === 'object' && e.id != null);
-  [...new Set([...Object.keys(antes), ...Object.keys(ahora)])].forEach((k) => {
-    if (fuera.includes(k) || igual(antes[k], ahora[k])) return;
-    const a = antes[k], b = ahora[k];
-    if (conId(a) && conId(b)) [...new Set([...a.map((e) => String(e.id)), ...b.map((e) => String(e.id))])].forEach((id) => { if (!igual(a.find((e) => String(e.id) === id), b.find((e) => String(e.id) === id))) out.push(k + '#' + id); });
-    else if (a && b && typeof a === 'object' && typeof b === 'object' && !Array.isArray(a) && !Array.isArray(b)) [...new Set([...Object.keys(a), ...Object.keys(b)])].forEach((s) => { if (!igual(a[s], b[s])) out.push(k + '.' + s); });
-    else out.push(k);
-  });
+/** Rutas de _campos (hasta 3 niveles): «campo», y luego «.clave» en objetos o «#id» en listas con id.
+ *  Ej.: «notas» · «hitos#h1.hecho» · «trabajo.secciones#s1». Cada ruta lleva su hora en _acts. */
+function trozosRuta(ruta) {
+  const r = String(ruta), m = r.match(/^[^.#]+/), k = m ? m[0] : r, out = [['.', k]], re = /([.#])([^.#]+)/g, resto = r.slice(k.length);
+  let x; while ((x = re.exec(resto)) !== null) out.push([x[1], x[2]]);
   return out;
 }
-/** Igual que en el PC y en Apps Script: con `_campos` solo se sustituyen esos campos */
+function leerTrozo(v, t) {
+  if (v == null || typeof v !== 'object') return undefined;
+  if (t[0] === '#') return Array.isArray(v) ? v.find(function (e) { return e && typeof e === 'object' && String(e.id) === t[1]; }) : undefined;
+  return Array.isArray(v) ? undefined : v[t[1]];
+}
+function ponerTrozo(cont, ts, i, val, hay) {
+  const t = ts[i], lista = t[0] === '#';
+  const c = lista ? (Array.isArray(cont) ? cont.slice() : []) : Object.assign({}, cont && typeof cont === 'object' && !Array.isArray(cont) ? cont : {});
+  let pos = -1; if (lista) c.forEach(function (e, n) { if (pos < 0 && e && typeof e === 'object' && String(e.id) === t[1]) pos = n; });
+  const actual = lista ? (pos >= 0 ? c[pos] : undefined) : c[t[1]], ultimo = i === ts.length - 1;
+  let nuevo = val;
+  if (!ultimo) { if (actual == null && !hay) return c; nuevo = ponerTrozo(actual, ts, i + 1, val, hay); }
+  if (lista) { if (ultimo && !hay) { if (pos >= 0) c.splice(pos, 1); } else if (pos >= 0) c[pos] = nuevo; else c.push(nuevo); }
+  else if (ultimo && !hay) delete c[t[1]]; else c[t[1]] = nuevo;
+  return c;
+}
+/** Copia en `out` lo que hay en `nuevo` en esa ruta (o lo quita, si en `nuevo` ya no está) */
+function aplicarRuta(out, nuevo, ruta) {
+  const ts = trozosRuta(ruta); let v = nuevo, hay = true;
+  for (let i = 0; i < ts.length; i++) { v = leerTrozo(v, ts[i]); if (v === undefined) { hay = false; break; } }
+  const r = ponerTrozo(out, ts, 0, hay ? v : undefined, hay), k = ts[0][1];
+  if (k in r) out[k] = r[k]; else delete out[k];
+}
+/** Hora de lo último escrito en esa ruta: la suya, o la de la ruta que la contiene, o la base */
+function horaDe(acts, ruta, base) {
+  let r = String(ruta);
+  for (;;) { if (acts[r] != null) return acts[r]; const m = r.match(/^(.*)[.#][^.#]+$/); if (!m) return base; r = m[1]; }
+}
+/** Qué rutas cambian de `antes` a `ahora` (hasta 3 niveles) */
+function camposDe(antes, ahora) {
+  const fuera = ['act', '_campos', '_acts', '_base'], out = [];
+  const igual = function (a, b) { return JSON.stringify(a) === JSON.stringify(b); };
+  const conId = function (v) { return Array.isArray(v) && v.every(function (e) { return e && typeof e === 'object' && e.id != null; }); };
+  const plano = function (v) { return v && typeof v === 'object' && !Array.isArray(v); };
+  const unir = function (a, b) { const u = []; a.concat(b).forEach(function (x) { if (u.indexOf(x) < 0) u.push(x); }); return u; };
+  const nodo = function (a, b, ruta, nivel) {
+    if (igual(a, b)) return;
+    if (nivel < 3 && conId(a) && conId(b)) unir(a.map(function (e) { return String(e.id); }), b.map(function (e) { return String(e.id); })).forEach(function (id) {
+      nodo(a.find(function (e) { return String(e.id) === id; }), b.find(function (e) { return String(e.id) === id; }), ruta + '#' + id, nivel + 1);
+    });
+    else if (nivel < 3 && plano(a) && plano(b)) unir(Object.keys(a), Object.keys(b)).forEach(function (k) { nodo(a[k], b[k], ruta + '.' + k, nivel + 1); });
+    else out.push(ruta);
+  };
+  unir(Object.keys(antes || {}), Object.keys(ahora || {})).forEach(function (k) { if (fuera.indexOf(k) < 0) nodo((antes || {})[k], (ahora || {})[k], k, 1); });
+  return out;
+}
+/** Un elemento con `_campos` solo cambia esas rutas, cada una si es más nueva que lo último escrito en ella;
+ *  sin `_campos` se sustituye entero (si es más nuevo: lo decide quien llama). */
 function mezclar(previo, x, ts) {
   const limpio = Object.assign({}, x); delete limpio._campos; delete limpio._acts; delete limpio._base;
   if (!previo || !Array.isArray(x._campos)) return Object.assign(limpio, { act: ts, _base: ts });
   const out = Object.assign({}, previo), acts = Object.assign({}, previo._acts || {});
   const base = previo._base != null ? previo._base : (previo.act || 0);
-  x._campos.forEach((ruta) => {
-    ruta = String(ruta); const k = ruta.split(/[#.]/)[0];
-    if (['id', 'act', '_acts', '_base', '_campos'].includes(k)) return;
-    if (ts < (acts[ruta] != null ? acts[ruta] : acts[k] != null ? acts[k] : base)) return; // eso se cambió después en otro sitio: gana lo más nuevo
+  x._campos.forEach(function (ruta) {
+    ruta = String(ruta); const k = trozosRuta(ruta)[0][1];
+    if (['id', 'act', '_acts', '_base', '_campos'].indexOf(k) >= 0) return;
+    if (ts < horaDe(acts, ruta, base)) return; // eso se cambió después en otro sitio: gana lo más nuevo
     aplicarRuta(out, limpio, ruta);
+    Object.keys(acts).forEach(function (a) { if (a.indexOf(ruta + '.') === 0 || a.indexOf(ruta + '#') === 0) delete acts[a]; });
     acts[ruta] = ts;
   });
   out._acts = acts; out._base = base; out.act = Math.max(previo.act || 0, ts);
@@ -484,7 +511,7 @@ function hojaTurno(f) {
 function hojaTarea(id) {
   const t = (S.doc.tareas || []).find((x) => x.id === id); if (!t) { S.tarea = null; return cerrar(); }
   S.tarea = id; const p = (S.doc.proyectos || []).find((x) => x.id === t.proyecto), h = p && (p.hitos || []).find((x) => x.id === t.hito);
-  S.w = JSON.parse(JSON.stringify(t.trabajo || TW.nuevo(t)));
+  S.w = TW.normalizar(JSON.parse(JSON.stringify(t.trabajo || TW.nuevo(t)))); S.wGuardado = JSON.parse(JSON.stringify(S.w));
   hoja(`<h2>${esc(t.titulo)}</h2><div class="meta" style="margin:-6px 0 12px">${p ? `<span class="chip">${esc(p.nombre)}</span>` : 'Carrera y redes'}${t.estado === 'hecha' ? ' · hecha' : ''}</div>
     ${htmlTrabajo(t, S.w)}
     ${h ? `<div class="card" style="margin-bottom:10px"><p class="label">Cuenta para</p><b>${esc(h.nombre)} · +${pesoReal(p, h, S.doc.proyectos || [])} %</b><div class="meta">Hecho cuando: ${esc(h.criterio || '')}</div></div>` : ''}
@@ -518,6 +545,13 @@ function hojaTarea(id) {
 const TW = window.TRABAJO;
 let tTrab = null;
 /** Guarda el trabajo de la tarea (solo ese campo, sobre la tarea tal como esté ahora). `ya`: sin esperar. */
+/** Lo que cambiaste (de `antes` a `ahora`) aplicado sobre el trabajo tal como esté (con lo que llegó del PC) */
+function fusionarTrabajo(actual, antes, ahora) {
+  if (!actual || !antes || JSON.stringify(TW.normalizar(actual)) !== JSON.stringify(actual)) return JSON.parse(JSON.stringify(ahora));
+  const out = JSON.parse(JSON.stringify(actual));
+  camposDe(antes, ahora).forEach((r) => aplicarRuta(out, ahora, r));
+  return out;
+}
 function guardarTrabajo(id, ya) {
   clearTimeout(tTrab);
   const g = $('#wguard'); if (g) g.textContent = 'Guardando…';
@@ -526,7 +560,8 @@ function guardarTrabajo(id, ya) {
     S.trabFlush = null; clearTimeout(tTrab);
     const t = (S.doc.tareas || []).find((x) => x.id === id); if (!t || !S.w) return;
     S.w.actualizado = new Date().toISOString();
-    setEn('tareas', Object.assign({}, t, { trabajo: JSON.parse(JSON.stringify(S.w)) }))();
+    const nuevo = fusionarTrabajo(t.trabajo, S.wGuardado, S.w); S.wGuardado = JSON.parse(JSON.stringify(S.w)); // solo lo que cambiaste
+    setEn('tareas', Object.assign({}, t, { trabajo: nuevo }))();
     const g2 = $('#wguard'); if (g2) g2.textContent = 'Guardado ✓';
   };
   S.trabFlush = hazlo;
@@ -562,7 +597,7 @@ function htmlTrabajo(t, w) {
 function ponerAlDiaHoja() {
   if (!S.tarea || !S.w || !$('#ftarea') || S.trabFlush) return; // solo si la hoja abierta es la de esa tarea
   const t = (S.doc.tareas || []).find((x) => x.id === S.tarea);
-  if (t && t.trabajo && (t.trabajo.actualizado || '') > (S.w.actualizado || '')) { S.w = JSON.parse(JSON.stringify(t.trabajo)); rehacerHoja(S.tarea); }
+  if (t && t.trabajo && JSON.stringify(TW.normalizar(t.trabajo)) !== JSON.stringify(S.w)) rehacerHoja(S.tarea); // la hoja se rehace desde la tarea al día
 }
 function rehacerHoja(id) {
   const f = $('#ftarea'), d = f ? { notas: f.notas.value, fecha: f.fecha.value, prioridad: f.prioridad.value } : null, base = S.detBase;
@@ -592,7 +627,7 @@ function conectarTrabajo(id) {
   }));
   hoja.querySelectorAll('[data-fh]').forEach((b) => b.addEventListener('click', () => { const f = w.filas[+b.dataset.fh]; f.hecho = !f.hecho; rehacer(); }));
   hoja.querySelectorAll('[data-fq]').forEach((b) => b.addEventListener('click', () => { w.filas.splice(+b.dataset.fq, 1); rehacer(); }));
-  const nf = $('#wfila'); if (nf) nf.addEventListener('click', () => { (w.filas = w.filas || []).push({ hecho: false, a: '', b: '' }); rehacer(); });
+  const nf = $('#wfila'); if (nf) nf.addEventListener('click', () => { (w.filas = w.filas || []).push({ id: TW.nuevoId('f'), hecho: false, a: '', b: '' }); rehacer(); });
   hoja.querySelectorAll('[data-paso]').forEach((b) => b.addEventListener('click', () => { const x = w.pasos[+b.dataset.paso]; x.hecho = !x.hecho; rehacer(); }));
   const j = hoja.querySelector('[data-just]'); if (j) j.addEventListener('input', () => { w.justificante = j.value; guardarTrabajo(id); });
   hoja.querySelectorAll('[data-campo]').forEach((ta) => ta.addEventListener('input', () => { w[ta.dataset.campo] = ta.value; guardarTrabajo(id); }));
@@ -604,9 +639,10 @@ function conectarTrabajo(id) {
   });
   const fin = $('#wterminar'); if (fin) fin.addEventListener('click', () => {
     guardarTrabajo(id, true);
-    const trabajo = Object.assign({}, S.w, { acabado: hoyISO(), actualizado: new Date().toISOString() });
+    const listo = Object.assign({}, S.w, { acabado: hoyISO(), actualizado: new Date().toISOString() }), antesW = S.wGuardado;
     S.tarea = null; S.w = null; cerrar(); // primero se guarda todo (también Detalles)…
     const t = (S.doc.tareas || []).find((x) => x.id === id); if (!t) return; // …y se termina sobre la tarea ya al día
+    const trabajo = fusionarTrabajo(t.trabajo, antesW, listo);
     const cambio = { col: { tareas: { set: [Object.assign({}, t, { estado: 'hecha', hecha_en: hoyISO(), trabajo })], del: [] } } };
     if (trabajo.tipo === 'fotos' && (trabajo.fotos || []).length) { // las elegidas quedan marcadas para prensa (igual que en el PC)
       const tags = S.doc.galeria_tags || {}, set = {};

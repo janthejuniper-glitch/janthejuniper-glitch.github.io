@@ -67,9 +67,9 @@
   function nuevo(t, tipo) {
     var r = regla(t); tipo = tipo || r.tipo
     var w = { tipo: tipo, minutos: 0, actualizado: null, acabado: null }
-    if (tipo === 'texto') w.secciones = (tipo === r.tipo && r.secciones ? r.secciones : POR_DEFECTO.secciones).map(function (x) { return { titulo: x[0], max: x[1], texto: x[2] || '' } })
+    if (tipo === 'texto') w.secciones = (tipo === r.tipo && r.secciones ? r.secciones : POR_DEFECTO.secciones).map(function (x, i) { return { id: 's' + i, titulo: x[0], max: x[1], texto: x[2] || '' } })
     if (tipo === 'lista') { w.filas = []; w.columnas = (tipo === r.tipo && r.columnas) || ['Nombre', 'Enlace']; w.importe = !!(tipo === r.tipo && r.importe) }
-    if (tipo === 'fuera') { w.pasos = (tipo === r.tipo && r.pasos ? r.pasos : ['Hacerlo', 'Guardar el justificante']).map(function (x) { return { texto: x, hecho: false } }); w.justificante = '' }
+    if (tipo === 'fuera') { w.pasos = (tipo === r.tipo && r.pasos ? r.pasos : ['Hacerlo', 'Guardar el justificante']).map(function (x, i) { return { id: 'p' + i, texto: x, hecho: false } }); w.justificante = '' }
     if (tipo === 'escucha') { w.notas = ''; w.decision = '' }
     if (tipo === 'fotos') w.fotos = []
     return w
@@ -126,7 +126,18 @@
     var s = (w && w.secciones) || [], asunto = (s[0] && s[0].texto) || '', cuerpo = (s[1] && s[1].texto) || ''
     return 'mailto:?subject=' + encodeURIComponent(asunto) + '&body=' + encodeURIComponent(cuerpo)
   }
-  var api = { ATAJOS: ATAJOS, NOMBRES: NOMBRES, tipoDe: tipoDe, nuevo: nuevo, guia: guia, empezado: empezado, progreso: progreso, mailto: mailto, sinAcentos: sinAcentos, numero: numero, total: total, cambiarTipo: cambiarTipo }
+  /** id para una fila o paso nuevo (único: así cada uno se guarda por separado entre dispositivos) */
+  function nuevoId(pre) { return pre + Date.now().toString(36) + Math.random().toString(36).slice(2, 5) }
+  /** Un trabajo antiguo sin ids en secciones/pasos/filas los recibe (por posición, igual en PC e iPhone) */
+  function normalizar(w) {
+    if (!w) return w
+    var x = JSON.parse(JSON.stringify(w))
+    ;[['secciones', 's'], ['pasos', 'p'], ['filas', 'f']].forEach(function (par) {
+      if (Array.isArray(x[par[0]])) x[par[0]] = x[par[0]].map(function (e, i) { return e && typeof e === 'object' && e.id == null ? Object.assign({ id: par[1] + i }, e) : e })
+    })
+    return x
+  }
+  var api = { nuevoId: nuevoId, normalizar: normalizar, ATAJOS: ATAJOS, NOMBRES: NOMBRES, tipoDe: tipoDe, nuevo: nuevo, guia: guia, empezado: empezado, progreso: progreso, mailto: mailto, sinAcentos: sinAcentos, numero: numero, total: total, cambiarTipo: cambiarTipo }
   if (typeof module !== 'undefined' && module.exports) module.exports = api
   g.TRABAJO = api
 })(typeof globalThis !== 'undefined' ? globalThis : this)
