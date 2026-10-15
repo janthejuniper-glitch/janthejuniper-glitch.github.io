@@ -281,7 +281,7 @@ function importancia(t, proys, hoy) {
 }
 function vCarrera() {
   const m = (S.diag && S.diag.metricas) || [], hoy = hoyISO(), est = S.doc.avisos_estado || {};
-  const avisos = ((S.diag && S.diag.avisos) || []).filter((a) => !est[a.id] || (est[a.id].estado === 'pospuesto' && (est[a.id].hasta || '') <= hoy)).sort((a, b) => b.prioridad - a.prioridad);
+  const avisos = ((S.diag && S.diag.avisos) || []).filter((a) => avisoVivo(a, est, hoy)).sort((a, b) => b.prioridad - a.prioridad);
   const num = (v) => v == null ? '—' : Number(v).toLocaleString('es-ES', { maximumFractionDigits: 1 });
   return `<div class="card"><p class="label">Tus números${S.diag && S.diag.actualizado ? ' · ' + esc(new Date(S.diag.actualizado).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })) : ''}</p>
     ${m.length ? m.map((x) => `<div class="row"><div class="txt"><div class="meta" style="margin:0">${esc(x.nombre)}</div><div class="tt" style="font:800 20px var(--display)">${num(x.valor)}${x.unidad ? ' ' + esc(x.unidad) : ''}</div>${x.deltaTxt ? `<div class="meta">${esc(x.deltaTxt)}</div>` : ''}</div></div>`).join('') : '<div class="vacio">Sin datos todavía.</div>'}</div>
@@ -301,12 +301,14 @@ function marcar(t) {
   setEn('tareas', x)(hecha ? '¡Hecho! ✓' : 'Reabierta', () => setEn('tareas', antes)('Deshecho'));
 }
 function aviso(a, accion) {
-  const v = accion === 'posponer' ? { estado: 'pospuesto', hasta: masDias(hoyISO(), 3) } : { estado: accion };
+  const v = accion === 'posponer' ? { estado: 'pospuesto', hasta: masDias(hoyISO(), 3) } : accion === 'hecho' ? { estado: 'hecho', hasta: masDias(hoyISO(), 14) } : { estado: accion };
   cambiar({ obj: { avisos_estado: { set: { [a.id]: v }, del: [] } } }, accion === 'posponer' ? 'Pospuesto 3 días' : accion === 'hecho' ? '¡Hecho! ✓' : 'Descartado');
 }
+/** Igual que en el PC: «Hecho» dura 14 días (si el problema vuelve, el aviso vuelve); «Descartar», para siempre */
+const avisoVivo = (a, est, hoy) => { const e = est[a.id]; return !e || (e.estado !== 'descartado' && (e.hasta || '') <= hoy); };
 function avisoATarea(a) {
   const t = { id: nuevoId(), titulo: a.accion, proyecto: null, hito: null, estado: 'pendiente', fecha: hoyISO(), prioridad: a.tipo === 'alerta' ? 'alta' : 'media', creada: hoyISO() };
-  cambiar({ col: { tareas: { set: [t], del: [] } }, obj: { avisos_estado: { set: { [a.id]: { estado: 'hecho' } }, del: [] } } }, 'Convertido en tarea para hoy');
+  cambiar({ col: { tareas: { set: [t], del: [] } }, obj: { avisos_estado: { set: { [a.id]: { estado: 'hecho', hasta: masDias(hoyISO(), 14) } }, del: [] } } }, 'Convertido en tarea para hoy');
 }
 function hito(p, h) {
   const q = JSON.parse(JSON.stringify(p)); const x = q.hitos.find((y) => y.id === h.id); x.hecho = !x.hecho; x.fecha = x.hecho ? hoyISO() : null;
@@ -319,7 +321,7 @@ function vHoy() {
   const prs = S.doc.proyectos || [];
   const tareas = pendientes().filter((t) => !t.fecha || t.fecha <= hoy).sort((a, b) => importancia(b, prs, hoy) - importancia(a, prs, hoy)).slice(0, 8);
   const est = S.doc.avisos_estado || {};
-  const avisos = ((S.diag && S.diag.avisos) || []).filter((a) => a.tipo !== 'logro' && (!est[a.id] || (est[a.id].estado === 'pospuesto' && (est[a.id].hasta || '') <= hoy))).sort((a, b) => b.prioridad - a.prioridad).slice(0, 2);
+  const avisos = ((S.diag && S.diag.avisos) || []).filter((a) => a.tipo !== 'logro' && avisoVivo(a, est, hoy)).sort((a, b) => b.prioridad - a.prioridad).slice(0, 2);
   const manana = turnosDe(masDias(hoy, 1));
   return `<div class="card">${tr.length ? tr.map((e) => `<div class="turno"><span class="ico">🛍️</span><div><b>Trabajo ${esc(e.inicio)}–${esc(e.fin)}</b><div class="sub">${esc(e.titulo !== 'Trabajo' ? e.titulo : 'Turno de hoy')}</div></div></div>`).join('')
       : `<div class="turno"><span class="ico">🌿</span><div><b>Sin turno</b><div class="sub">Día para tu música</div></div></div>`}
