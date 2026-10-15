@@ -137,7 +137,29 @@
     })
     return x
   }
-  var api = { nuevoId: nuevoId, normalizar: normalizar, ATAJOS: ATAJOS, NOMBRES: NOMBRES, tipoDe: tipoDe, nuevo: nuevo, guia: guia, empezado: empezado, progreso: progreso, mailto: mailto, sinAcentos: sinAcentos, numero: numero, total: total, cambiarTipo: cambiarTipo }
+  /** Un trabajo guardado solo lleva lo que alguien escribió: lo demás (secciones o pasos que nadie tocó, valores por
+   *  defecto) sale de su plantilla, que es la misma en el PC y en el iPhone. Respeta el orden de la plantilla. */
+  function completar(w, t) {
+    if (!w) return w
+    var x = normalizar(w), tpl = normalizar(nuevo(t || {}, x.tipo || tipoDe(t || {})))
+    Object.keys(tpl).forEach(function (k) {
+      if (x[k] === undefined) { x[k] = tpl[k]; return }
+      if ((k === 'secciones' || k === 'pasos') && Array.isArray(x[k]) && Array.isArray(tpl[k])) {
+        var pos = function (id) { for (var q = 0; q < tpl[k].length; q++) if (tpl[k][q].id === id) return q; return -1 }
+        tpl[k].forEach(function (e, i) {
+          if (x[k].some(function (y) { return y && y.id === e.id })) return
+          var en = x[k].length
+          for (var n = 0; n < x[k].length; n++) if (pos(x[k][n] && x[k][n].id) > i) { en = n; break }
+          x[k].splice(en, 0, e)
+        })
+      }
+    })
+    return x
+  }
+  /** Con qué comparar la PRIMERA vez que se guarda el trabajo de una tarea: con su plantilla (así solo viaja lo que
+   *  escribiste, y dos dispositivos que empiezan a la vez no se pisan las secciones vacías de la plantilla) */
+  function baseDe(t, w) { return normalizar(nuevo(t || {}, (w && w.tipo) || tipoDe(t || {}))) }
+  var api = { completar: completar, baseDe: baseDe, nuevoId: nuevoId, normalizar: normalizar, ATAJOS: ATAJOS, NOMBRES: NOMBRES, tipoDe: tipoDe, nuevo: nuevo, guia: guia, empezado: empezado, progreso: progreso, mailto: mailto, sinAcentos: sinAcentos, numero: numero, total: total, cambiarTipo: cambiarTipo }
   if (typeof module !== 'undefined' && module.exports) module.exports = api
   g.TRABAJO = api
 })(typeof globalThis !== 'undefined' ? globalThis : this)

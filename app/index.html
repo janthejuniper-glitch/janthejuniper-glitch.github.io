@@ -178,22 +178,31 @@ function leerTrozo(v, t) {
   if (t[0] === '#') return Array.isArray(v) ? v.find(function (e) { return e && typeof e === 'object' && String(e.id) === t[1]; }) : undefined;
   return Array.isArray(v) ? undefined : v[t[1]];
 }
-function ponerTrozo(cont, ts, i, val, hay) {
+function ponerTrozo(cont, ts, i, val, hay, fuentes) {
   const t = ts[i], lista = t[0] === '#';
   const c = lista ? (Array.isArray(cont) ? cont.slice() : []) : Object.assign({}, cont && typeof cont === 'object' && !Array.isArray(cont) ? cont : {});
   let pos = -1; if (lista) c.forEach(function (e, n) { if (pos < 0 && e && typeof e === 'object' && String(e.id) === t[1]) pos = n; });
   const actual = lista ? (pos >= 0 ? c[pos] : undefined) : c[t[1]], ultimo = i === ts.length - 1;
   let nuevo = val;
-  if (!ultimo) { if (actual == null && !hay) return c; nuevo = ponerTrozo(actual, ts, i + 1, val, hay); }
-  if (lista) { if (ultimo && !hay) { if (pos >= 0) c.splice(pos, 1); } else if (pos >= 0) c[pos] = nuevo; else c.push(nuevo); }
+  if (!ultimo) { if (actual == null && !hay) return c; nuevo = ponerTrozo(actual, ts, i + 1, val, hay, fuentes); }
+  if (lista) {
+    if (ultimo && !hay) { if (pos >= 0) c.splice(pos, 1); }
+    else if (pos >= 0) c[pos] = nuevo;
+    else { // un elemento nuevo va en su sitio según el orden de donde viene (las secciones no se desordenan)
+      const f = fuentes && fuentes[i], ids = Array.isArray(f) ? f.map(function (e) { return e && typeof e === 'object' ? String(e.id) : null; }) : [];
+      const yo = ids.indexOf(t[1]); let en = c.length;
+      if (yo >= 0) for (let n = 0; n < c.length; n++) { const j = ids.indexOf(c[n] && typeof c[n] === 'object' ? String(c[n].id) : null); if (j > yo) { en = n; break; } }
+      c.splice(en, 0, nuevo);
+    }
+  }
   else if (ultimo && !hay) delete c[t[1]]; else c[t[1]] = nuevo;
   return c;
 }
 /** Copia en `out` lo que hay en `nuevo` en esa ruta (o lo quita, si en `nuevo` ya no está) */
 function aplicarRuta(out, nuevo, ruta) {
-  const ts = trozosRuta(ruta); let v = nuevo, hay = true;
-  for (let i = 0; i < ts.length; i++) { v = leerTrozo(v, ts[i]); if (v === undefined) { hay = false; break; } }
-  const r = ponerTrozo(out, ts, 0, hay ? v : undefined, hay), k = ts[0][1];
+  const ts = trozosRuta(ruta), fuentes = []; let v = nuevo, hay = true;
+  for (let i = 0; i < ts.length; i++) { fuentes.push(v); v = leerTrozo(v, ts[i]); if (v === undefined) { hay = false; break; } }
+  const r = ponerTrozo(out, ts, 0, hay ? v : undefined, hay, fuentes), k = ts[0][1];
   if (k in r) out[k] = r[k]; else delete out[k];
 }
 /** Hora de lo último escrito en esa ruta: la suya, o la de la ruta que la contiene, o la base */
@@ -208,8 +217,12 @@ function camposDe(antes, ahora) {
   const conId = function (v) { return Array.isArray(v) && v.every(function (e) { return e && typeof e === 'object' && e.id != null; }); };
   const plano = function (v) { return v && typeof v === 'object' && !Array.isArray(v); };
   const unir = function (a, b) { const u = []; a.concat(b).forEach(function (x) { if (u.indexOf(x) < 0) u.push(x); }); return u; };
+  const vacio = function (v) { return v === undefined || v === null; };
   const nodo = function (a, b, ruta, nivel) {
     if (igual(a, b)) return;
+    if (vacio(a) && (conId(b) && b.length === 0 || plano(b) && Object.keys(b).length === 0)) { out.push(ruta); return; }
+    if (vacio(a) && conId(b)) a = [];
+    else if (vacio(a) && plano(b)) a = {};
     if (nivel < 3 && conId(a) && conId(b)) unir(a.map(function (e) { return String(e.id); }), b.map(function (e) { return String(e.id); })).forEach(function (id) {
       nodo(a.find(function (e) { return String(e.id) === id; }), b.find(function (e) { return String(e.id) === id; }), ruta + '#' + id, nivel + 1);
     });
@@ -242,7 +255,9 @@ function conCampos(cambios) {
   Object.keys(cambios.col || {}).forEach((col) => {
     const actual = S.doc && S.doc[col] || [];
     cambios.col[col].set = (cambios.col[col].set || []).map((x) => {
-      const y = actual.find((e) => e.id === x.id); if (!y || Array.isArray(x._campos)) return x;
+      let y = actual.find((e) => e.id === x.id); if (!y || Array.isArray(x._campos)) return x;
+      // primer trabajo de una tarea: se compara con su plantilla (solo viaja lo escrito; dos dispositivos no se pisan)
+      if (col === 'tareas' && !y.trabajo && x.trabajo) { const c = camposDe(Object.assign({}, y, { trabajo: TW.baseDe(x, x.trabajo) }), x); if (!c.includes('trabajo.tipo')) c.push('trabajo.tipo'); return Object.assign({}, x, { _campos: c }); }
       return Object.assign({}, x, { _campos: camposDe(y, x) });
     });
   });
@@ -413,7 +428,7 @@ function vHoy() {
   return `<div class="card">${tr.length ? tr.map((e) => `<div class="turno"><span class="ico">🛍️</span><div><b>Trabajo ${esc(e.inicio)}–${esc(e.fin)}</b><div class="sub">${esc(e.titulo !== 'Trabajo' ? e.titulo : 'Turno de hoy')}</div></div></div>`).join('')
       : `<div class="turno"><span class="ico">🌿</span><div><b>Sin turno</b><div class="sub">Día para tu música</div></div></div>`}
     <div class="meta" style="margin-top:10px">Mañana: ${manana.length ? manana.map((e) => esc(e.inicio + '–' + e.fin)).join(', ') : 'libre'}</div></div>
-    ${aMedias().length ? `<div class="card"><p class="label">Seguir donde lo dejaste</p>${aMedias().map((t) => `<button class="seguir" data-abrir="${esc(t.id)}"><b>${esc(t.titulo)}</b><span class="chip">${Math.round(TW.progreso(t.trabajo) * 100)} %</span><span class="btn pri">Seguir →</span></button>`).join('')}</div>` : ''}
+    ${aMedias().length ? `<div class="card"><p class="label">Seguir donde lo dejaste</p>${aMedias().map((t) => `<button class="seguir" data-abrir="${esc(t.id)}"><b>${esc(t.titulo)}</b><span class="chip">${Math.round(TW.progreso(TW.completar(t.trabajo, t)) * 100)} %</span><span class="btn pri">Seguir →</span></button>`).join('')}</div>` : ''}
     <div class="card"><p class="label">Ahora toca</p>${tareas.length ? tareas.map(filaTarea).join('') : '<div class="vacio">Nada pendiente para hoy. 💜</div>'}</div>
     ${avisos.map((a) => `<div class="card aviso"><p class="label">${a.tipo === 'alerta' ? '⚠️ Aviso' : '💡 Consejo'}</p><b>${esc(a.titulo)}</b><div class="vacio" style="padding:0">${esc(a.texto)}</div><div class="acc">→ ${esc(a.accion)}</div>
       <div class="btns"><button class="btn pri" data-a="tarea" data-id="${esc(a.id)}">→ Tarea</button><button class="btn" data-a="hecho" data-id="${esc(a.id)}">Hecho</button><button class="btn" data-a="posponer" data-id="${esc(a.id)}">Posponer 3 d</button><button class="btn" data-a="descartado" data-id="${esc(a.id)}">Descartar</button></div></div>`).join('')}`;
@@ -422,7 +437,7 @@ const aMedias = () => (S.doc.tareas || []).filter((t) => t.estado !== 'hecha' &&
 function filaTarea(t) {
   const hoy = hoyISO(), p = nombreProy(t.proyecto);
   return `<div class="row ${t.estado === 'hecha' ? 'hecha' : ''}"><button class="check ${t.estado === 'hecha' ? 'on' : ''}" data-t="${esc(t.id)}" aria-pressed="${t.estado === 'hecha'}" aria-label="${t.estado === 'hecha' ? 'Hecha: reabrir' : 'Marcar como hecha'} «${esc(t.titulo)}»"></button>
-    <div class="txt" data-abrir="${esc(t.id)}" role="button" tabindex="0" aria-label="Abrir «${esc(t.titulo)}» para hacerla"><div class="tt">${esc(t.titulo)}</div><div class="meta">${p ? `<span class="chip">${esc(p)}</span>` : ''}${t.prioridad === 'alta' ? '<span class="chip alta">alta</span>' : ''}${t.estado !== 'hecha' && t.trabajo && TW.empezado(t.trabajo) ? `<span class="chip">✎ ${Math.round(TW.progreso(t.trabajo) * 100)} %</span>` : ''}${t.trabajo && t.trabajo.archivo ? '<span>📄</span>' : ''}
+    <div class="txt" data-abrir="${esc(t.id)}" role="button" tabindex="0" aria-label="Abrir «${esc(t.titulo)}» para hacerla"><div class="tt">${esc(t.titulo)}</div><div class="meta">${p ? `<span class="chip">${esc(p)}</span>` : ''}${t.prioridad === 'alta' ? '<span class="chip alta">alta</span>' : ''}${t.estado !== 'hecha' && t.trabajo && TW.empezado(t.trabajo) ? `<span class="chip">✎ ${Math.round(TW.progreso(TW.completar(t.trabajo, t)) * 100)} %</span>` : ''}${t.trabajo && t.trabajo.archivo ? '<span>📄</span>' : ''}
     ${t.fecha ? `<span class="${t.fecha < hoy && t.estado !== 'hecha' ? 'chip tarde' : ''}">${t.fecha === hoy ? 'hoy' : t.fecha < hoy ? 'atrasada · ' + esc(t.fecha.slice(5).split('-').reverse().join('/')) : esc(largo(t.fecha))}</span>` : ''}</div></div></div>`;
 }
 function vSemana() {
@@ -511,7 +526,7 @@ function hojaTurno(f) {
 function hojaTarea(id) {
   const t = (S.doc.tareas || []).find((x) => x.id === id); if (!t) { S.tarea = null; return cerrar(); }
   S.tarea = id; const p = (S.doc.proyectos || []).find((x) => x.id === t.proyecto), h = p && (p.hitos || []).find((x) => x.id === t.hito);
-  S.w = TW.normalizar(JSON.parse(JSON.stringify(t.trabajo || TW.nuevo(t)))); S.wGuardado = JSON.parse(JSON.stringify(S.w));
+  S.w = TW.completar(JSON.parse(JSON.stringify(t.trabajo || TW.nuevo(t))), t); S.wGuardado = JSON.parse(JSON.stringify(S.w));
   hoja(`<h2>${esc(t.titulo)}</h2><div class="meta" style="margin:-6px 0 12px">${p ? `<span class="chip">${esc(p.nombre)}</span>` : 'Carrera y redes'}${t.estado === 'hecha' ? ' · hecha' : ''}</div>
     ${htmlTrabajo(t, S.w)}
     ${h ? `<div class="card" style="margin-bottom:10px"><p class="label">Cuenta para</p><b>${esc(h.nombre)} · +${pesoReal(p, h, S.doc.proyectos || [])} %</b><div class="meta">Hecho cuando: ${esc(h.criterio || '')}</div></div>` : ''}
@@ -597,7 +612,7 @@ function htmlTrabajo(t, w) {
 function ponerAlDiaHoja() {
   if (!S.tarea || !S.w || !$('#ftarea') || S.trabFlush) return; // solo si la hoja abierta es la de esa tarea
   const t = (S.doc.tareas || []).find((x) => x.id === S.tarea);
-  if (t && t.trabajo && JSON.stringify(TW.normalizar(t.trabajo)) !== JSON.stringify(S.w)) rehacerHoja(S.tarea); // la hoja se rehace desde la tarea al día
+  if (t && t.trabajo && JSON.stringify(TW.completar(t.trabajo, t)) !== JSON.stringify(S.w)) rehacerHoja(S.tarea); // la hoja se rehace desde la tarea al día
 }
 function rehacerHoja(id) {
   const f = $('#ftarea'), d = f ? { notas: f.notas.value, fecha: f.fecha.value, prioridad: f.prioridad.value } : null, base = S.detBase;
