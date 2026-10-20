@@ -2,42 +2,206 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Jan The Juniper</title>
-<meta name="description" content="Jan The Juniper — artista, productora y vocalista.">
+<meta name="description" content="Jan The Juniper — artista, productora, vocalista y DJ de Castellón. Escucha su música, mira sus vídeos y contacta para conciertos.">
 <meta name="theme-color" content="#0b0812">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Jan The Juniper">
+<meta property="og:description" content="Artista · productora · vocalista · DJ — Castellón">
+<meta property="og:image" content="https://janthejuniper-glitch.github.io/prensa/portada-enlaces.jpg">
+<meta property="og:url" content="https://janthejuniper-glitch.github.io/">
 <link rel="icon" href="favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" href="icon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preload" as="image" href="prensa/portada-enlaces.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root { color-scheme: dark; --ink: #ece6ff; --dim: #a497c4; --acc: #c9b6ff; --line: rgba(201,182,255,.22); }
+  :root {
+    color-scheme: dark;
+    --bg: #0b0812; --ink: #f4effc; --mute: #c3b8da;
+    --collision: #e07bff; --surrender: #9f8cff; --acc: #c9b6ff;
+    --edge: rgba(201, 182, 255, .26); --edge-hi: rgba(201, 182, 255, .55);
+    --card: rgba(20, 13, 34, .55); --card-hi: rgba(38, 25, 62, .7);
+  }
   * { box-sizing: border-box; }
-  body { margin: 0; min-height: 100svh; display: grid; place-items: center; padding: 16px;
-    background: radial-gradient(80% 60% at 50% 35%, #2a1550, #0b0812 70%); color: var(--ink); font: 16px/1.5 Inter, system-ui, sans-serif; }
-  main { text-align: center; max-width: 560px; }
-  h1 { font-family: Unbounded, sans-serif; font-weight: 800; font-size: clamp(2rem, 8vw, 3.6rem); letter-spacing: -.02em; margin: 0; line-height: 1.05; }
-  p { color: var(--dim); margin: 14px 0 28px; }
-  nav { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
-  a { color: var(--ink); text-decoration: none; border: 1px solid var(--line); padding: 10px 16px; border-radius: 999px; background: rgba(255,255,255,.04); transition: background .2s; }
-  a:hover { background: rgba(201,182,255,.14); }
-  footer { margin-top: 40px; font-size: .8rem; } footer a { border: 0; padding: 0; background: none; color: var(--dim); }
+  html { background: var(--bg); }
+  /* sin fondo propio: el del body taparía el 3D (que va detrás, en z-index negativo) */
+  body { margin: 0; min-height: 100svh; color: var(--ink); background: transparent;
+    font: 16px/1.5 Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  a { color: inherit; text-decoration: none; }
+  :focus-visible { outline: 2px solid var(--acc); outline-offset: 3px; border-radius: 18px; }
+
+  /* fondo interactivo: rejilla de puntos que se curva alrededor del dedo o el ratón; al tocar, una onda */
+  #escena { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -2; display: block; }
+  .velo { position: fixed; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(90% 70% at 50% 45%, transparent 35%, rgba(11, 8, 18, .85)); }
+
+  main { width: 100%; max-width: 440px; margin: 0 auto; padding: max(20px, env(safe-area-inset-top)) 16px 28px; display: grid; gap: 14px; }
+
+  .portada { position: relative; aspect-ratio: 4 / 5; border-radius: 28px; overflow: hidden; border: 1px solid var(--edge);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, .55), 0 0 0 1px rgba(224, 123, 255, .08), 0 0 80px rgba(159, 140, 255, .18);
+    transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .25s ease-out; }
+  .portada img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; }
+  .portada::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 45%, rgba(11, 8, 18, .55) 68%, rgba(11, 8, 18, .94)); }
+  .portada .texto { position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; padding: 22px; text-align: center; }
+  h1 { font-family: Unbounded, sans-serif; font-weight: 800; font-size: clamp(1.8rem, 8.6vw, 2.3rem); line-height: 1.04; letter-spacing: -.02em; margin: 0;
+    background: linear-gradient(90deg, #fff, #eadfff 50%, var(--collision)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .rol { margin: 8px 0 0; font-weight: 500; color: var(--ink); font-size: .95rem; }
+
+  .redes { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+  .redes a { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--edge);
+    background: var(--card); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); transition: transform .2s, border-color .2s, background .2s; }
+  .redes a:hover { transform: translateY(-3px); border-color: var(--edge-hi); background: var(--card-hi); }
+  .redes svg { width: 20px; height: 20px; fill: var(--ink); }
+
+  .boton { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 60px; padding: 14px 18px; border-radius: 20px;
+    font-weight: 600; border: 1px solid var(--edge); background: var(--card); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    transition: transform .2s, border-color .2s, background .2s; }
+  .boton:hover { transform: translateY(-3px); border-color: var(--edge-hi); background: var(--card-hi); }
+  .boton:active { transform: scale(.98); }
+  .boton svg { width: 22px; height: 22px; fill: currentColor; flex: none; }
+  .boton svg.trazo { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .principal { background: linear-gradient(120deg, var(--collision), var(--surrender)); color: #160b26; border-color: transparent; font-size: 1.05rem;
+    box-shadow: 0 12px 40px rgba(224, 123, 255, .35); }
+  .principal:hover { background: linear-gradient(120deg, #eb9bff, #b3a4ff); border-color: transparent; }
+
+  .mosaico { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .tile { position: relative; aspect-ratio: 1; border-radius: 22px; overflow: hidden; border: 1px solid var(--edge); background: #140c22;
+    transition: transform .2s, border-color .2s; }
+  .tile:hover { transform: translateY(-3px); border-color: var(--edge-hi); }
+  .tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .5s ease; }
+  .tile:hover img { transform: scale(1.06); }
+  .tile::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(11, 8, 18, .05) 25%, rgba(11, 8, 18, .55) 55%, rgba(11, 8, 18, .95)); }
+  .tile .pie { position: absolute; left: 14px; right: 14px; bottom: 12px; z-index: 1; }
+  .tile b { display: block; font-weight: 600; } .tile small { display: block; color: var(--mute); font-size: .8rem; }
+  .tile .play { position: absolute; z-index: 1; top: 12px; right: 12px; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center;
+    background: rgba(11, 8, 18, .55); border: 1px solid rgba(255, 255, 255, .3); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .tile .play svg { width: 15px; height: 15px; fill: #fff; margin-left: 2px; }
+
+  footer { text-align: center; color: var(--mute); font-size: .78rem; margin-top: 8px; }
+  footer a { text-decoration: underline; text-underline-offset: 3px; }
+
+  .entra { opacity: 0; transform: translateY(14px); animation: entra .7s cubic-bezier(.2, .8, .2, 1) forwards; animation-delay: calc(var(--n, 0) * 70ms); }
+  @keyframes entra { to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .entra { animation: none; opacity: 1; transform: none; }
+    .portada, .boton, .redes a, .tile, .tile img { transition: none; }
+  }
 </style>
 </head>
 <body>
+<canvas id="escena" aria-hidden="true"></canvas>
+<div class="velo" aria-hidden="true"></div>
 <main>
-  <img src="icon-192.png" alt="JN" width="72" height="72" style="border-radius:20px;box-shadow:0 0 0 1px var(--line),0 0 40px rgba(168,40,251,.45);margin-bottom:18px">
-  <h1>JAN THE JUNIPER</h1>
-  <p>Artista · productora · vocalista</p>
-  <nav>
-    <a href="presskit.html" style="background:var(--ink);color:#0b0812">Press kit</a>
-    <a href="https://open.spotify.com/artist/00nP0BkqQ96pB20X7KFaH3">Spotify</a>
-    <a href="https://instagram.com/janthejuniper_">Instagram</a>
-    <a href="https://pinterest.com/janthejuniper">Pinterest</a>
-    <a href="mailto:janthejuniper@gmail.com">Contacto</a>
+  <header class="portada entra" id="portada">
+    <img src="prensa/portada-enlaces.jpg" alt="Jan The Juniper con la Tierra proyectada sobre el cuerpo" width="960" height="1434">
+    <div class="texto">
+      <h1>JAN THE JUNIPER</h1>
+      <p class="rol">Artista · productora · vocalista · DJ</p>
+    </div>
+  </header>
+
+  <nav class="redes entra" style="--n:1" aria-label="Redes">
+    <a href="https://instagram.com/janthejuniper_" aria-label="Instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.0301.084c-1.2768.0602-2.1487.264-2.911.5634-.7888.3075-1.4575.72-2.1228 1.3877-.6652.6677-1.075 1.3368-1.3802 2.127-.2954.7638-.4956 1.6365-.552 2.914-.0564 1.2775-.0689 1.6882-.0626 4.947.0062 3.2586.0206 3.6671.0825 4.9473.061 1.2765.264 2.1482.5635 2.9107.308.7889.72 1.4573 1.388 2.1228.6679.6655 1.3365 1.0743 2.1285 1.38.7632.295 1.6361.4961 2.9134.552 1.2773.056 1.6884.069 4.9462.0627 3.2578-.0062 3.668-.0207 4.9478-.0814 1.28-.0607 2.147-.2652 2.9098-.5633.7889-.3086 1.4578-.72 2.1228-1.3881.665-.6682 1.0745-1.3378 1.3795-2.1284.2957-.7632.4966-1.636.552-2.9124.056-1.2809.0692-1.6898.063-4.948-.0063-3.2583-.021-3.6668-.0817-4.9465-.0607-1.2797-.264-2.1487-.5633-2.9117-.3084-.7889-.72-1.4568-1.3876-2.1228C21.2982 1.33 20.628.9208 19.8378.6165 19.074.321 18.2017.1197 16.9244.0645 15.6471.0093 15.236-.005 11.977.0014 8.718.0076 8.31.0215 7.0301.0839m.1402 21.6932c-1.17-.0509-1.8053-.2453-2.2287-.408-.5606-.216-.96-.4771-1.3819-.895-.422-.4178-.6811-.8186-.9-1.378-.1644-.4234-.3624-1.058-.4171-2.228-.0595-1.2645-.072-1.6442-.079-4.848-.007-3.2037.0053-3.583.0607-4.848.05-1.169.2456-1.805.408-2.2282.216-.5613.4762-.96.895-1.3816.4188-.4217.8184-.6814 1.3783-.9003.423-.1651 1.0575-.3614 2.227-.4171 1.2655-.06 1.6447-.072 4.848-.079 3.2033-.007 3.5835.005 4.8495.0608 1.169.0508 1.8053.2445 2.228.408.5608.216.96.4754 1.3816.895.4217.4194.6816.8176.9005 1.3787.1653.4217.3617 1.056.4169 2.2263.0602 1.2655.0739 1.645.0796 4.848.0058 3.203-.0055 3.5834-.061 4.848-.051 1.17-.245 1.8055-.408 2.2294-.216.5604-.4763.96-.8954 1.3814-.419.4215-.8181.6811-1.3783.9-.4224.1649-1.0577.3617-2.2262.4174-1.2656.0595-1.6448.072-4.8493.079-3.2045.007-3.5825-.006-4.848-.0608M16.953 5.5864A1.44 1.44 0 1 0 18.39 4.144a1.44 1.44 0 0 0-1.437 1.4424M5.8385 12.012c.0067 3.4032 2.7706 6.1557 6.173 6.1493 3.4026-.0065 6.157-2.7701 6.1506-6.1733-.0065-3.4032-2.771-6.1565-6.174-6.1498-3.403.0067-6.156 2.771-6.1496 6.1738M8 12.0077a4 4 0 1 1 4.008 3.9921A3.9996 3.9996 0 0 1 8 12.0077"/></svg></a>
+    <a href="https://www.tiktok.com/@janthejuniper_" aria-label="TikTok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg></a>
+    <a href="https://www.youtube.com/@janthejuniper_" aria-label="YouTube"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
+    <a href="https://soundcloud.com/janthejuniper" aria-label="SoundCloud"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23.999 14.165c-.052 1.796-1.612 3.169-3.4 3.169h-8.18a.68.68 0 0 1-.675-.683V7.862a.747.747 0 0 1 .452-.724s.75-.513 2.333-.513a5.364 5.364 0 0 1 2.763.755 5.433 5.433 0 0 1 2.57 3.54c.282-.08.574-.121.868-.12.884 0 1.73.358 2.347.992s.948 1.49.922 2.373ZM10.721 8.421c.247 2.98.427 5.697 0 8.672a.264.264 0 0 1-.53 0c-.395-2.946-.22-5.718 0-8.672a.264.264 0 0 1 .53 0ZM9.072 9.448c.285 2.659.37 4.986-.006 7.655a.277.277 0 0 1-.55 0c-.331-2.63-.256-5.02 0-7.655a.277.277 0 0 1 .556 0Zm-1.663-.257c.27 2.726.39 5.171 0 7.904a.266.266 0 0 1-.532 0c-.38-2.69-.257-5.21 0-7.904a.266.266 0 0 1 .532 0Zm-1.647.77a26.108 26.108 0 0 1-.008 7.147.272.272 0 0 1-.542 0 27.955 27.955 0 0 1 0-7.147.275.275 0 0 1 .55 0Zm-1.67 1.769c.421 1.865.228 3.5-.029 5.388a.257.257 0 0 1-.514 0c-.21-1.858-.398-3.549 0-5.389a.272.272 0 0 1 .543 0Zm-1.655-.273c.388 1.897.26 3.508-.01 5.412-.026.28-.514.283-.54 0-.244-1.878-.347-3.54-.01-5.412a.283.283 0 0 1 .56 0Zm-1.668.911c.4 1.268.257 2.292-.026 3.572a.257.257 0 0 1-.514 0c-.241-1.262-.354-2.312-.023-3.572a.283.283 0 0 1 .563 0Z"/></svg></a>
+    <a href="https://pinterest.com/janthejuniper" aria-label="Pinterest"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.162-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.741.099.12.112.225.085.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.401.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.354-.629-2.758-1.379l-.749 2.848c-.269 1.045-1.004 2.352-1.498 3.146 1.123.345 2.306.535 3.55.535 6.607 0 11.985-5.365 11.985-11.987C23.97 5.39 18.592.026 11.985.026L12.017 0z"/></svg></a>
   </nav>
-  <footer><a href="privacidad.html">Privacidad</a></footer>
+
+  <a class="boton principal entra" style="--n:2" href="https://open.spotify.com/artist/00nP0BkqQ96pB20X7KFaH3">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg> Escúchame en Spotify</a>
+
+  <div class="mosaico">
+    <a class="tile entra" style="--n:3" href="https://youtu.be/3xvs9LE79GI">
+      <img src="https://i.ytimg.com/vi/3xvs9LE79GI/maxresdefault.jpg" alt="" loading="lazy">
+      <span class="play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></svg></span>
+      <span class="pie"><b>Club Of The Crazy Ones</b><small>Videoclip</small></span></a>
+    <a class="tile entra" style="--n:4" href="presskit.html">
+      <img src="prensa/presskit-mini.jpg" alt="" loading="lazy">
+      <span class="pie"><b>Press kit</b><small>Para salas y medios</small></span></a>
+  </div>
+
+  <a class="boton entra" style="--n:5" href="mailto:janthejuniper@gmail.com?subject=Booking%20%C2%B7%20Jan%20The%20Juniper">
+    <svg class="trazo" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg> Booking y contacto</a>
+
+  <footer class="entra" style="--n:6">Castellón · © 2026 Jan The Juniper · <a href="privacidad.html">Privacidad</a></footer>
 </main>
+
+<script>
+  // la portada se inclina un poco hacia el ratón (solo con ratón: en el móvil se queda quieta)
+  (function () {
+    var p = document.getElementById('portada')
+    if (!matchMedia('(hover: hover) and (pointer: fine)').matches || matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    p.addEventListener('pointermove', function (e) {
+      var r = p.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5
+      p.style.setProperty('--ry', (x * 8).toFixed(2) + 'deg'); p.style.setProperty('--rx', (-y * 8).toFixed(2) + 'deg')
+    })
+    p.addEventListener('pointerleave', function () { p.style.setProperty('--ry', '0deg'); p.style.setProperty('--rx', '0deg') })
+  })()
+</script>
+<script>
+(function () {
+
+  // ── común: tamaño, puntero (ratón o dedo), toques, scroll, pausa cuando no se ve ──
+  const lienzo = document.getElementById('escena')
+  const quieto = matchMedia('(prefers-reduced-motion: reduce)').matches
+  const P = { x: innerWidth * 0.5, y: innerHeight * 0.35, activo: false, ultimo: 0 }
+  const toques = []
+  addEventListener('pointermove', (e) => { P.x = e.clientX; P.y = e.clientY; P.activo = true; P.ultimo = performance.now() }, { passive: true })
+  addEventListener('pointerdown', (e) => { P.x = e.clientX; P.y = e.clientY; P.activo = true; P.ultimo = performance.now(); toques.push({ x: e.clientX, y: e.clientY, t: performance.now() }); if (toques.length > 6) toques.shift() }, { passive: true })
+  const scrollY_ = () => window.scrollY || document.documentElement.scrollTop || 0
+  function arrancar(pintar) {
+    if (quieto) { pintar(performance.now()); addEventListener('resize', () => pintar(performance.now())); return }
+    let id = 0
+    const bucle = (t) => { pintar(t); id = requestAnimationFrame(bucle) }
+    id = requestAnimationFrame(bucle)
+    document.addEventListener('visibilitychange', () => { cancelAnimationFrame(id); if (!document.hidden) id = requestAnimationFrame(bucle) })
+  }
+  // sin ratón (móvil), el «puntero» pasea solo despacio hasta que tocas
+  function punteroVivo(t) {
+    if (P.activo && t - P.ultimo < 4000) return { x: P.x, y: P.y }
+    const s = t / 1000
+    return { x: innerWidth * (0.5 + 0.32 * Math.sin(s * 0.13)), y: innerHeight * (0.45 + 0.3 * Math.sin(s * 0.09 + 1.3)) }
+  }
+
+  const g = lienzo.getContext('2d')
+  let W = 0, H = 0, puntos = [], paso = 30
+  function medir() {
+    const dpr = Math.min(devicePixelRatio, 2); W = innerWidth; H = innerHeight
+    lienzo.width = W * dpr; lienzo.height = H * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0)
+    paso = W < 600 ? 26 : 32; puntos = []
+    for (let y = -paso; y < H + paso * 2; y += paso) for (let x = -paso; x < W + paso * 2; x += paso) puntos.push({ bx: x, by: y, x, y })
+  }
+  medir(); addEventListener('resize', medir)
+  let cursor = { x: W / 2, y: H / 3 }, ondas = []
+  arrancar((t) => {
+    const obj = punteroVivo(t); cursor.x += (obj.x - cursor.x) * 0.08; cursor.y += (obj.y - cursor.y) * 0.08
+    while (toques.length) { const q = toques.shift(); ondas.push({ x: q.x, y: q.y, t: q.t }) }
+    ondas = ondas.filter((o) => t - o.t < 1600)
+    const s = t / 1000, desp = (scrollY_() * 0.3) % paso
+    g.fillStyle = '#0b0812'; g.fillRect(0, 0, W, H)
+    const hg = g.createRadialGradient(cursor.x, cursor.y, 0, cursor.x, cursor.y, 260); hg.addColorStop(0, 'rgba(159,140,255,.16)'); hg.addColorStop(1, 'rgba(159,140,255,0)')
+    g.fillStyle = hg; g.fillRect(0, 0, W, H)
+    for (const p of puntos) {
+      const by = p.by - desp
+      let dx = p.bx - cursor.x, dy = by - cursor.y, d = Math.hypot(dx, dy) + 0.001
+      // gravedad: los puntos cerca del dedo se acercan a él (como si curvara el espacio)
+      const tir = Math.exp(-d / 160) * 34
+      let tx = p.bx - dx / d * tir, ty = by - dy / d * tir
+      for (const o of ondas) { const e = (t - o.t) / 1000, ox = p.bx - o.x, oy = by - o.y, od = Math.hypot(ox, oy) + 0.001, frente = e * 520
+        const k = Math.exp(-Math.abs(od - frente) / 40) * (1 - e / 1.6) * 18; tx += ox / od * k; ty += oy / od * k }
+      p.x += (tx - p.x) * 0.15; p.y += (ty - p.y) * 0.15
+      const ola = 0.5 + 0.5 * Math.sin(p.bx * 0.012 + by * 0.01 - s * 0.6)
+      const luz = Math.exp(-d / 200)
+      g.fillStyle = `rgba(${190 + 50 * luz | 0},${160 + 40 * luz | 0},255,${(0.18 + 0.16 * ola + 0.82 * luz).toFixed(3)})`
+      const rr = 1.2 + 0.7 * ola + 2.2 * luz
+      g.fillRect(p.x - rr / 2, p.y - rr / 2, rr, rr)
+    }
+  })
+
+})()
+</script>
 </body>
 </html>
