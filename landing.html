@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Jan The Juniper — artista, productora, vocalista y DJ de Barcelona. Música, vídeos, press kit y booking en un solo sitio.">
+<meta name="theme-color" content="#0b0812">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Jan The Juniper">
+<meta property="og:description" content="Artista · productora · vocalista · DJ — Barcelona">
+<meta property="og:image" content="https://janthejuniper-glitch.github.io/prensa/portada-enlaces.jpg">
+<meta property="og:url" content="https://janthejuniper-glitch.github.io/">
+<link rel="icon" href="favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" href="icon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<!--artifact:inicio-->
+<title>Jan The Juniper</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* Una columna que se abre como un set: portada → enlaces en bento → música → press kit como expediente → booking.
+     El fondo 3D cambia de forma en cada parada (planeta, órbita, colisión, rejilla, galaxia). */
+  :root {
+    color-scheme: dark;
+    --noche: #0b0812;      /* fondo */
+    --tinta: #f4effc;      /* texto */
+    --bruma: #b9add3;      /* texto secundario */
+    --collision: #e07bff;  /* cara COLLISION: rabia */
+    --surrender: #9f8cff;  /* cara SURRENDER: vulnerabilidad */
+    --listo: #8ef0c0; --proceso: #ffc46b;
+    --linea: rgba(201, 182, 255, .18); --linea-hi: rgba(201, 182, 255, .5);
+    --panel: rgba(17, 11, 30, .8); --panel-hi: rgba(32, 21, 54, .88);
+    --display: Unbounded, "Arial Black", system-ui, sans-serif;
+    --texto: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+    --radio: 22px;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--noche); scroll-behavior: smooth; }
+  body { margin: 0; background: var(--noche); color: var(--tinta); font: 16px/1.55 var(--texto); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  html.sin-3d body { background: radial-gradient(80% 60% at 70% 20%, rgba(159, 140, 255, .22), transparent 70%), radial-gradient(60% 50% at 10% 80%, rgba(224, 123, 255, .16), transparent 70%), var(--noche); background-attachment: fixed; }
+  a { color: inherit; text-decoration: none; -webkit-tap-highlight-color: transparent; }
+  img { max-width: 100%; display: block; }
+  button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent; }
+  :focus-visible { outline: 2px solid var(--collision); outline-offset: 3px; border-radius: 12px; }
+  ::selection { background: var(--collision); color: var(--noche); }
+
+  /* ── fondo 3D ── */
+  #escena { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; display: block; }
+  html.sin-3d #escena { display: none; }
+  .velo { position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background: radial-gradient(120% 90% at 50% 40%, transparent 30%, rgba(11, 8, 18, .78)); }
+  .capa { position: relative; z-index: 1; }
+
+  /* ── barra superior ── */
+  body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--noche); }
+  .arriba { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+    background: linear-gradient(180deg, rgba(11, 8, 18, .92), rgba(11, 8, 18, .6)); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--linea); }
+  .marca { display: flex; align-items: center; gap: 10px; min-height: 44px; min-width: 44px; font: 800 .8rem/1 var(--display); letter-spacing: .02em; white-space: nowrap; }
+  .marca img { width: 30px; height: 30px; border-radius: 9px; box-shadow: 0 0 0 1px var(--linea), 0 0 22px rgba(224, 123, 255, .35); }
+  .menu { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+  .menu::-webkit-scrollbar { display: none; }
+  .menu a { display: inline-flex; align-items: center; min-height: 40px; font: 500 .78rem/1 var(--mono); letter-spacing: .04em; text-transform: uppercase; padding: 0 11px; border-radius: 999px; color: var(--bruma); white-space: nowrap; transition: color .2s, background .2s; }
+  .menu a:hover { color: var(--tinta); }
+  .menu a.activo { color: var(--noche); background: var(--tinta); }
+  .progreso { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; overflow: hidden; }
+  .progreso i { display: block; height: 100%; background: linear-gradient(90deg, var(--surrender), var(--collision)); transform-origin: 0 50%; transform: scaleX(0); }
+  @media (max-width: 560px) { .arriba { padding-block: 6px; } .marca span { display: none; } .menu { gap: 2px; } .menu a { min-height: 44px; padding: 0 8px; font-size: .75rem; letter-spacing: .02em; } }
+  @media (max-width: 380px) { .arriba { gap: 6px; } .menu a { padding: 0 5px; letter-spacing: 0; } }
+
+  /* ── estructura ── */
+  .marco { width: 100%; max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  section { scroll-margin-top: 72px; }
+  .bloque-sec { padding-block: clamp(56px, 9vw, 110px); }
+  .cabeza { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; margin-bottom: 28px; }
+  .ceja { font: 500 .74rem/1.4 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--collision); margin: 0 0 12px; }
+  h2 { font: 800 clamp(1.9rem, 5.4vw, 3.4rem)/1 var(--display); letter-spacing: -.035em; margin: 0; text-wrap: balance; }
+  h3 { font: 500 1.02rem/1.25 var(--display); letter-spacing: -.01em; margin: 0; }
+  .nota { color: var(--bruma); font-size: .92rem; margin: 0; max-width: 60ch; }
+
+  /* ── portada ── */
+  .inicio { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); gap: clamp(24px, 5vw, 64px); align-items: center; padding-block: clamp(28px, 6vw, 72px) clamp(40px, 6vw, 80px); }
+  .hud { font: 400 .72rem/1.3 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--bruma); margin: 0; }
+  .hud b { color: var(--tinta); font-weight: 500; }
+  h1 { font-family: var(--display); font-weight: 800; font-size: clamp(2.7rem, 7vw, 6.4rem); line-height: .9; letter-spacing: -.045em; margin: 18px 0 18px; }
+  h1 span { display: block; }
+  h1 .j2 { background: linear-gradient(95deg, var(--tinta) 0%, #eadfff 30%, var(--collision) 70%, var(--surrender)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .rol { font: 500 clamp(1rem, 2.2vw, 1.2rem)/1.4 var(--texto); margin: 0 0 26px; }
+  .acciones { display: flex; flex-wrap: wrap; gap: 10px; }
+  .boton { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; padding: 12px 20px; border-radius: 999px; font-weight: 600;
+    border: 1px solid var(--linea-hi); background: var(--panel); cursor: pointer; transition: transform .2s, background .2s, border-color .2s; }
+  .boton:hover { transform: translateY(-2px); background: var(--panel-hi); border-color: var(--tinta); }
+  .boton:active { transform: scale(.98); }
+  .boton svg { width: 20px; height: 20px; flex: none; }
+  .boton.pri { background: linear-gradient(115deg, var(--collision), var(--surrender)); color: #170b28; border-color: transparent; box-shadow: 0 14px 44px rgba(224, 123, 255, .32); }
+  .boton.pri:hover { background: linear-gradient(115deg, #eb9bff, #b6a8ff); }
+  .redes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+  .redes a { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--linea); background: var(--panel); transition: transform .2s, border-color .2s; }
+  .redes a:hover { transform: translateY(-3px); border-color: var(--linea-hi); }
+  .redes svg { width: 19px; height: 19px; }
+  .portada { position: relative; margin: 0; aspect-ratio: 4 / 5; max-width: 100%; border-radius: 30px; overflow: hidden; border: 1px solid var(--linea-hi);
+    box-shadow: 0 40px 90px rgba(0, 0, 0, .55), 0 0 90px rgba(159, 140, 255, .22);
+    transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .3s ease-out; }
+  .portada img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; }
+  .portada::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 60%, rgba(11, 8, 18, .7)); }
+  .portada figcaption { position: absolute; z-index: 1; left: 16px; right: 16px; bottom: 14px; display: flex; justify-content: space-between; gap: 8px; }
+  @media (max-width: 760px) {
+    .inicio { grid-template-columns: 1fr; gap: 22px; padding-top: 18px; }
+    .portada { order: -1; aspect-ratio: 4 / 4.4; max-height: 52svh; width: 100%; border-radius: 26px; }
+    h1 { margin: 10px 0 12px; font-size: clamp(2.4rem, 13.4vw, 5rem); }
+    .rol { margin-bottom: 20px; }
+    .acciones .boton { flex: 1 1 100%; }
+  }
+
+  /* ── enlaces (bento) ── */
+  .bento { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  .tarjeta { position: relative; isolation: isolate; display: flex; flex-direction: column; justify-content: space-between; gap: 18px; min-height: 150px; padding: 18px;
+    border-radius: var(--radio); border: 1px solid var(--linea); background: var(--panel); overflow: hidden; transition: transform .25s, border-color .25s; }
+  .tarjeta::before { content: ""; position: absolute; inset: 0; z-index: -1; opacity: 0; transition: opacity .3s;
+    background: radial-gradient(280px circle at var(--mx, 50%) var(--my, 50%), rgba(224, 123, 255, .18), transparent 65%); }
+  .tarjeta:hover { transform: translateY(-3px); border-color: var(--linea-hi); }
+  .tarjeta:hover::before { opacity: 1; }
+  .tarjeta .ico { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; background: rgba(244, 239, 252, .07); border: 1px solid var(--linea); }
+  .tarjeta .ico svg { width: 20px; height: 20px; }
+  .tarjeta .flecha { position: absolute; top: 16px; right: 16px; width: 18px; height: 18px; opacity: .55; transition: transform .25s, opacity .25s; }
+  .tarjeta:hover .flecha { transform: translate(3px, -3px); opacity: 1; }
+  .tarjeta small { display: block; font: 400 .74rem/1.35 var(--mono); color: var(--bruma); margin-top: 6px; overflow-wrap: anywhere; }
+  .ancha { grid-column: span 2; }
+  .tarjeta.spotify { background: linear-gradient(135deg, rgba(224, 123, 255, .95), rgba(159, 140, 255, .95)); color: #170b28; border-color: transparent; min-height: 200px; }
+  .tarjeta.spotify::before { background: radial-gradient(280px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, .35), transparent 65%); }
+  .tarjeta.spotify h3 { font: 800 clamp(1.4rem, 3vw, 2rem)/1.05 var(--display); letter-spacing: -.03em; }
+  .tarjeta.spotify small { color: rgba(23, 11, 40, .75); }
+  .tarjeta.spotify .ico { background: rgba(23, 11, 40, .12); border-color: rgba(23, 11, 40, .2); }
+  .tarjeta.video { min-height: 200px; justify-content: flex-end; background: #140c22; }
+  .tarjeta.video img { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; transition: transform .6s ease; }
+  .tarjeta.video::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(11, 8, 18, .05) 30%, rgba(11, 8, 18, .92)); }
+  .tarjeta.video:hover img { transform: scale(1.05); }
+  .tarjeta.video .play { position: absolute; top: 16px; left: 16px; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: rgba(11, 8, 18, .55); border: 1px solid rgba(255, 255, 255, .35); }
+  .tarjeta.video .play svg { width: 16px; height: 16px; margin-left: 3px; }
+  .extra { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-top: 16px; }
+  @media (max-width: 760px) { .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .tarjeta { min-height: 128px; padding: 16px; } .tarjeta.spotify, .tarjeta.video { min-height: 170px; } }
+
+  /* ── música ── */
+  .caras { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .cara { position: relative; min-height: 260px; padding: 24px; border-radius: var(--radio); border: 1px solid var(--linea); display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; overflow: hidden; }
+  .cara.c { background: linear-gradient(160deg, rgba(224, 123, 255, .3), var(--panel) 62%); }
+  .cara.s { background: linear-gradient(200deg, rgba(159, 140, 255, .3), var(--panel) 62%); }
+  .cara b { font: 800 clamp(1.8rem, 4.6vw, 3rem)/1 var(--display); letter-spacing: -.04em; }
+  .cara.c b { color: var(--collision); } .cara.s b { color: var(--surrender); }
+  .cara p { margin: 0; color: var(--bruma); }
+  .cara .hud { position: absolute; top: 20px; left: 24px; right: 24px; display: flex; justify-content: space-between; }
+  .reproductor { margin-top: 18px; }
+  .reproductor iframe { width: 100%; height: 352px; border: 0; border-radius: 16px; display: block; }
+  @media (max-width: 760px) { .caras { grid-template-columns: 1fr; } .cara { min-height: 200px; } }
+
+  /* ── press kit (plantilla) ── */
+  .medidor { display: grid; gap: 8px; min-width: 220px; }
+  .medidor p { margin: 0; font: 400 .78rem/1.3 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--bruma); }
+  .medidor p b { color: var(--tinta); font-weight: 500; }
+  .medidor .barra { height: 6px; border-radius: 99px; background: rgba(244, 239, 252, .1); overflow: hidden; }
+  .medidor .barra i { display: block; height: 100%; width: calc(var(--p, 0) * 100%); background: linear-gradient(90deg, var(--surrender), var(--collision)); border-radius: inherit; }
+  .expediente { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .apartado { min-width: 0; padding: 22px; border-radius: var(--radio); border: 1px solid var(--linea); background: var(--panel); display: grid; gap: 16px; align-content: start; }
+  .apartado.todo { grid-column: 1 / -1; }
+  .apartado header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .estado { display: inline-flex; align-items: center; gap: 7px; flex: none; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--linea); font: 500 .68rem/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+  .estado::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--listo); box-shadow: 0 0 10px var(--listo); }
+  [data-estado="proceso"] .estado::before { background: var(--proceso); box-shadow: 0 0 10px var(--proceso); animation: latido 1.6s ease-in-out infinite; }
+  @keyframes latido { 50% { opacity: .35; } }
+  [data-estado="proceso"] { border-style: dashed; border-color: var(--linea-hi); background: rgba(17, 11, 30, .55); }
+  .hueco { display: grid; gap: 9px; }
+  .hueco i { display: block; height: 10px; border-radius: 6px; background: linear-gradient(90deg, rgba(244, 239, 252, .06), rgba(244, 239, 252, .14), rgba(244, 239, 252, .06)); background-size: 200% 100%; animation: brillo 2.4s linear infinite; }
+  .hueco i:nth-child(2) { width: 82%; } .hueco i:nth-child(3) { width: 58%; }
+  @keyframes brillo { to { background-position: -200% 0; } }
+  .hueco p { margin: 4px 0 0; font: 400 .78rem/1.5 var(--mono); color: var(--bruma); }
+  .lang { display: inline-flex; border: 1px solid var(--linea); border-radius: 999px; padding: 3px; justify-self: start; }
+  .lang button { min-height: 46px; background: none; border: 0; color: var(--bruma); font: 600 .85rem/1 var(--texto); padding: 0 16px; border-radius: 999px; cursor: pointer; }
+  .lang button[aria-pressed="true"] { background: var(--tinta); color: var(--noche); }
+  .bio p { margin: 0 0 12px; max-width: 62ch; } .bio p:last-child { margin-bottom: 0; }
+  .ficha { display: grid; margin: 0; }
+  .ficha div { display: flex; justify-content: space-between; gap: 16px; padding-block: 10px; border-top: 1px solid var(--linea); }
+  .ficha div:first-child { border-top: 0; padding-top: 0; }
+  .ficha dt { color: var(--bruma); font-size: .9rem; } .ficha dd { margin: 0; font-weight: 600; text-align: right; overflow-wrap: anywhere; min-width: 0; }
+  /* galería en espejo: las fotos van por parejas (cósmicas, rojas de frente, ODIO, cuerpo) */
+  .fotos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; grid-template-areas: "f1 f3 f4 f2" "f7 f5 f6 f8"; }
+  .fotos .f1 { grid-area: f1; } .fotos .f2 { grid-area: f2; } .fotos .f3 { grid-area: f3; } .fotos .f4 { grid-area: f4; }
+  .fotos .f5 { grid-area: f5; } .fotos .f6 { grid-area: f6; } .fotos .f7 { grid-area: f7; } .fotos .f8 { grid-area: f8; }
+  .fotos a { position: relative; display: block; aspect-ratio: 2 / 3; border-radius: 14px; overflow: hidden; background: #160e24; }
+  .fotos img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s; }
+  .fotos a:hover img { transform: scale(1.05); }
+  .fotos span { position: absolute; left: 8px; bottom: 8px; padding: 4px 8px; border-radius: 8px; background: rgba(11, 8, 18, .72); font: 500 .66rem/1 var(--mono); letter-spacing: .06em; }
+  .mini-video { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 14px; align-items: center; }
+  .mini-video img { width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 12px; }
+  .mini-video b { display: block; } .mini-video small { color: var(--bruma); font: 400 .74rem/1.4 var(--mono); }
+  @media (max-width: 760px) { .expediente { grid-template-columns: 1fr; } .apartado.todo { grid-column: auto; } .fotos { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "f1 f2" "f3 f4" "f7 f8" "f5 f6"; } .apartado { padding: 18px; } .mini-video { grid-template-columns: 1fr; } }
+
+  /* ── booking ── */
+  .contacto { display: grid; gap: 20px; padding: clamp(24px, 5vw, 48px); border-radius: 30px; border: 1px solid var(--linea-hi);
+    background: linear-gradient(140deg, rgba(224, 123, 255, .14), rgba(17, 11, 30, .85) 45%, rgba(159, 140, 255, .14)); }
+  .correo { font: 800 clamp(1.15rem, 4.6vw, 2.6rem)/1.1 var(--display); letter-spacing: -.03em; overflow-wrap: anywhere; user-select: all; margin: 0; }
+  footer { padding-block: 28px 40px; color: var(--bruma); font-size: .82rem; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 20px; }
+  footer a { display: inline-block; padding-block: 12px; text-decoration: underline; text-underline-offset: 3px; }
+
+  /* lectura de la escena 3D: esquina inferior, solo en pantallas anchas */
+  .lectura { position: fixed; z-index: 2; left: max(16px, env(safe-area-inset-left, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); pointer-events: none;
+    display: flex; gap: 14px; padding: 7px 12px; border-radius: 999px; background: rgba(11, 8, 18, .7); border: 1px solid var(--linea); }
+  html.sin-3d .lectura { display: none; }
+  @media (max-width: 900px) { .lectura { display: none; } }
+
+  /* entrada al hacer scroll: la página ya está completa en reposo; solo se mueve en navegadores que lo soportan */
+  @supports (animation-timeline: view()) {
+    .aparece { animation: aparece linear both; animation-timeline: view(); animation-range: entry 0% entry 55%; }
+    @keyframes aparece { from { opacity: .25; transform: translateY(12px) scale(.985); } }
+  }
+  /* en el móvil (entrada desde Instagram) nada de letra por debajo de 12 px; va al final para ganar a los estilos de base */
+  @media (max-width: 760px) {
+    .hud, .ceja { font-size: .78rem; }
+    .tarjeta small, .mini-video small { font-size: .8rem; }
+    .estado, .fotos span { font-size: .75rem; }
+  }
+  /* pantallas táctiles: sin efectos de «pasar por encima» que se quedan pegados; respuesta al tocar */
+  @media (hover: none) {
+    .tarjeta:hover, .boton:hover, .redes a:hover { transform: none; }
+    .tarjeta:hover::before { opacity: 0; }
+    .tarjeta.video:hover img, .fotos a:hover img { transform: none; }
+    .tarjeta:active, .boton:active, .redes a:active, .fotos a:active { transform: scale(.97); transition-duration: .08s; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .aparece, .hueco i, [data-estado="proceso"] .estado::before { animation: none; }
+    .portada, .tarjeta, .boton, .redes a, .fotos img, .tarjeta.video img { transition: none; }
+  }
+</style>
+</head><body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-spotify" viewBox="0 0 24 24"><path fill="currentColor" d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></symbol>
+  <symbol id="i-instagram" viewBox="0 0 24 24"><path fill="currentColor" d="M7.0301.084c-1.2768.0602-2.1487.264-2.911.5634-.7888.3075-1.4575.72-2.1228 1.3877-.6652.6677-1.075 1.3368-1.3802 2.127-.2954.7638-.4956 1.6365-.552 2.914-.0564 1.2775-.0689 1.6882-.0626 4.947.0062 3.2586.0206 3.6671.0825 4.9473.061 1.2765.264 2.1482.5635 2.9107.308.7889.72 1.4573 1.388 2.1228.6679.6655 1.3365 1.0743 2.1285 1.38.7632.295 1.6361.4961 2.9134.552 1.2773.056 1.6884.069 4.9462.0627 3.2578-.0062 3.668-.0207 4.9478-.0814 1.28-.0607 2.147-.2652 2.9098-.5633.7889-.3086 1.4578-.72 2.1228-1.3881.665-.6682 1.0745-1.3378 1.3795-2.1284.2957-.7632.4966-1.636.552-2.9124.056-1.2809.0692-1.6898.063-4.948-.0063-3.2583-.021-3.6668-.0817-4.9465-.0607-1.2797-.264-2.1487-.5633-2.9117-.3084-.7889-.72-1.4568-1.3876-2.1228C21.2982 1.33 20.628.9208 19.8378.6165 19.074.321 18.2017.1197 16.9244.0645 15.6471.0093 15.236-.005 11.977.0014 8.718.0076 8.31.0215 7.0301.0839m.1402 21.6932c-1.17-.0509-1.8053-.2453-2.2287-.408-.5606-.216-.96-.4771-1.3819-.895-.422-.4178-.6811-.8186-.9-1.378-.1644-.4234-.3624-1.058-.4171-2.228-.0595-1.2645-.072-1.6442-.079-4.848-.007-3.2037.0053-3.583.0607-4.848.05-1.169.2456-1.805.408-2.2282.216-.5613.4762-.96.895-1.3816.4188-.4217.8184-.6814 1.3783-.9003.423-.1651 1.0575-.3614 2.227-.4171 1.2655-.06 1.6447-.072 4.848-.079 3.2033-.007 3.5835.005 4.8495.0608 1.169.0508 1.8053.2445 2.228.408.5608.216.96.4754 1.3816.895.4217.4194.6816.8176.9005 1.3787.1653.4217.3617 1.056.4169 2.2263.0602 1.2655.0739 1.645.0796 4.848.0058 3.203-.0055 3.5834-.061 4.848-.051 1.17-.245 1.8055-.408 2.2294-.216.5604-.4763.96-.8954 1.3814-.419.4215-.8181.6811-1.3783.9-.4224.1649-1.0577.3617-2.2262.4174-1.2656.0595-1.6448.072-4.8493.079-3.2045.007-3.5825-.006-4.848-.0608M16.953 5.5864A1.44 1.44 0 1 0 18.39 4.144a1.44 1.44 0 0 0-1.437 1.4424M5.8385 12.012c.0067 3.4032 2.7706 6.1557 6.173 6.1493 3.4026-.0065 6.157-2.7701 6.1506-6.1733-.0065-3.4032-2.771-6.1565-6.174-6.1498-3.403.0067-6.156 2.771-6.1496 6.1738M8 12.0077a4 4 0 1 1 4.008 3.9921A3.9996 3.9996 0 0 1 8 12.0077"/></symbol>
+  <symbol id="i-tiktok" viewBox="0 0 24 24"><path fill="currentColor" d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.920.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.350 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.020.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></symbol>
+  <symbol id="i-youtube" viewBox="0 0 24 24"><path fill="currentColor" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.930-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></symbol>
+  <symbol id="i-soundcloud" viewBox="0 0 24 24"><path fill="currentColor" d="M23.999 14.165c-.052 1.796-1.612 3.169-3.4 3.169h-8.18a.68.68 0 0 1-.675-.683V7.862a.747.747 0 0 1 .452-.724s.75-.513 2.333-.513a5.364 5.364 0 0 1 2.763.755 5.433 5.433 0 0 1 2.57 3.54c.282-.08.574-.121.868-.12.884 0 1.73.358 2.347.992s.948 1.49.922 2.373ZM10.721 8.421c.247 2.98.427 5.697 0 8.672a.264.264 0 0 1-.53 0c-.395-2.946-.22-5.718 0-8.672a.264.264 0 0 1 .53 0ZM9.072 9.448c.285 2.659.37 4.986-.006 7.655a.277.277 0 0 1-.55 0c-.331-2.63-.256-5.020 0-7.655a.277.277 0 0 1 .556 0Zm-1.663-.257c.27 2.726.39 5.171 0 7.904a.266.266 0 0 1-.532 0c-.38-2.690-.257-5.210 0-7.904a.266.266 0 0 1 .532 0Zm-1.647.77a26.108 26.108 0 0 1-.008 7.147.272.272 0 0 1-.542 0 27.955 27.955 0 0 1 0-7.147.275.275 0 0 1 .55 0Zm-1.67 1.769c.421 1.865.228 3.500-.029 5.388a.257.257 0 0 1-.514 0c-.21-1.858-.398-3.549 0-5.389a.272.272 0 0 1 .543 0Zm-1.655-.273c.388 1.897.26 3.508-.01 5.412-.026.28-.514.283-.54 0-.244-1.878-.347-3.540-.01-5.412a.283.283 0 0 1 .56 0Zm-1.668.911c.4 1.268.257 2.292-.026 3.572a.257.257 0 0 1-.514 0c-.241-1.262-.354-2.312-.023-3.572a.283.283 0 0 1 .563 0Z"/></symbol>
+  <symbol id="i-pinterest" viewBox="0 0 24 24"><path fill="currentColor" d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.162-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.741.099.12.112.225.085.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.401.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.354-.629-2.758-1.379l-.749 2.848c-.269 1.045-1.004 2.352-1.498 3.146 1.123.345 2.306.535 3.55.535 6.607 0 11.985-5.365 11.985-11.987C23.97 5.39 18.592.026 11.985.026L12.017 0z"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></g></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></g></symbol>
+  <symbol id="i-flecha" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M7 17L17 7M8 7h9v9"/></symbol>
+  <symbol id="i-copiar" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></g></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path fill="currentColor" d="M6 4l14 8-14 8z"/></symbol>
+  <symbol id="i-bajar" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m-5-5l5 5 5-5M5 20h14"/></symbol>
+</svg>
+
+<canvas id="escena" aria-hidden="true"></canvas>
+<div class="velo" aria-hidden="true"></div>
+
+<header class="arriba capa">
+  <a class="marca" href="#inicio"><img src="icon-192.png" alt="" width="30" height="30"><span>JAN THE JUNIPER</span></a>
+  <nav class="menu" aria-label="Secciones">
+    <a href="#enlaces">Enlaces</a><a href="#musica">Música</a><a href="#presskit">Press kit</a><a href="#booking">Booking</a>
+  </nav>
+  <div class="progreso" aria-hidden="true"><i id="progreso"></i></div>
+</header>
+
+<main class="capa">
+
+  <section id="inicio" class="marco inicio" data-escena="0">
+    <div>
+      <p class="hud">Barcelona · <b>41.39°N 2.17°E</b></p>
+      <h1><span>JAN THE</span><span class="j2">JUNIPER</span></h1>
+      <p class="rol">Artista · productora · vocalista · DJ</p>
+      <div class="acciones">
+        <a class="boton pri" href="https://open.spotify.com/artist/00nP0BkqQ96pB20X7KFaH3"><svg aria-hidden="true"><use href="#i-spotify"/></svg>Escúchame en Spotify</a>
+        <a class="boton" href="#presskit"><svg aria-hidden="true"><use href="#i-doc"/></svg>Press kit</a>
+      </div>
+      <nav class="redes" aria-label="Redes">
+        <a href="https://instagram.com/janthejuniper_" aria-label="Instagram"><svg aria-hidden="true"><use href="#i-instagram"/></svg></a>
+        <a href="https://www.tiktok.com/@janthejuniper_" aria-label="TikTok"><svg aria-hidden="true"><use href="#i-tiktok"/></svg></a>
+        <a href="https://www.youtube.com/@janthejuniper_" aria-label="YouTube"><svg aria-hidden="true"><use href="#i-youtube"/></svg></a>
+        <a href="https://soundcloud.com/janthejuniper" aria-label="SoundCloud"><svg aria-hidden="true"><use href="#i-soundcloud"/></svg></a>
+        <a href="https://pinterest.com/janthejuniper" aria-label="Pinterest"><svg aria-hidden="true"><use href="#i-pinterest"/></svg></a>
+      </nav>
+    </div>
+    <figure class="portada" id="portada">
+      <img src="prensa/portada-enlaces.jpg" alt="Jan The Juniper con la Tierra proyectada sobre el cuerpo" width="960" height="1434" fetchpriority="high">
+      <figcaption><span class="hud"><b>JTJ</b> · 2026</span><span class="hud">Foto de prensa 02</span></figcaption>
+    </figure>
+  </section>
+
+  <section id="enlaces" class="marco bloque-sec" data-escena="1">
+    <div class="cabeza aparece">
+      <div><p class="ceja">Todo en un sitio</p><h2>Enlaces</h2></div>
+    </div>
+    <div class="bento" id="bento">
+      <a class="tarjeta spotify ancha aparece" href="https://open.spotify.com/artist/00nP0BkqQ96pB20X7KFaH3">
+        <span class="ico"><svg aria-hidden="true"><use href="#i-spotify"/></svg></span><svg class="flecha" aria-hidden="true"><use href="#i-flecha"/></svg>
+        <div><h3>Escúchame en Spotify</h3><small>Todos los temas publicados</small></div></a>
+      <a class="tarjeta video ancha aparece" href="https://youtu.be/3xvs9LE79GI">
+        <img src="prensa/club-of-the-crazy-ones.jpg" alt="" loading="lazy" width="800" height="450">
+        <span class="play" aria-hidden="true"><svg><use href="#i-play"/></svg></span><svg class="flecha" aria-hidden="true"><use href="#i-flecha"/></svg>
+        <div><h3>Club Of The Crazy Ones</h3><small>Videoclip · YouTube</small></div></a>
+      <a class="tarjeta aparece" href="https://instagram.com/janthejuniper_">
+        <span class="ico"><svg aria-hidden="true"><use href="#i-instagram"/></svg></span><svg class="flecha" aria-hidden="true"><use href="#i-flecha"/></svg>
+        <div><h3>Instagram</h3><small>@janthejuniper_</small></div></a>
+      <a class="tarjeta aparece" href="https://www.tiktok.com/@janthejuniper_">
+        <span class="ico"><svg aria-hidden="true"><use href="#i-tiktok"/></svg></span><svg class="flecha" aria-hidden="true"><use href="#i-flecha"/></svg>
+        <div><h3>TikTok</h3><small>@janthejuniper_</small></div></a>
+      <a class="tarjeta aparece" href="https://www.youtube.com/@janthejuniper_">
+        <span class="ico"><svg aria-hidden="true"><use href="#i-youtube"/></svg></span><svg class="flecha" aria-hidden="true"><use href="#i-flecha"/></svg>
+        <div><h3>YouTube</h3><small>@janthejuniper_</small></div></a>
+      <a class="tarjeta aparece" href="https://soundcloud.com/janthejuniper">
+        <span class="ico"><svg aria-hidden="true"><use href="#i-soundcloud"/></svg></span><svg class="flecha" aria-hidden="true"><use href="#i-flecha"/></svg>
+        <div><h3>SoundCloud</h3><small>/janthejuniper</small></div></a>
+      <a class="tarjeta ancha aparece" href="#presskit">
+        <span class="ico"><svg aria-hidden="true"><use href="#i-doc"/></svg></span>
+        <div><h3>Press kit</h3><small>Bio, fotos en alta y ficha para salas, festivales y medios</small></div></a>
+      <a class="tarjeta aparece" href="#booking">
+        <span class="ico"><svg aria-hidden="true"><use href="#i-mail"/></svg></span>
+        <div><h3>Booking</h3><small>Conciertos y DJ sets</small></div></a>
+      <a class="tarjeta aparece" href="https://pinterest.com/janthejuniper">
+        <span class="ico"><svg aria-hidden="true"><use href="#i-pinterest"/></svg></span><svg class="flecha" aria-hidden="true"><use href="#i-flecha"/></svg>
+        <div><h3>Pinterest</h3><small>/janthejuniper</small></div></a>
+    </div>
+    <div class="extra">
+      <button class="boton" type="button" id="copiar-enlace" data-copiar="https://janthejuniper-glitch.github.io/"><svg aria-hidden="true"><use href="#i-copiar"/></svg><span>Copiar el enlace de esta página</span></button>
+    </div>
+  </section>
+
+  <section id="musica" class="marco bloque-sec" data-escena="2">
+    <div class="cabeza aparece">
+      <div><p class="ceja">Próximo trabajo</p><h2>Música</h2></div>
+      <p class="nota">Tras el EP 999 (2021), Jan prepara un EP de dos caras.</p>
+    </div>
+    <div class="caras">
+      <div class="cara c aparece"><span class="hud"><span>Cara A</span><span>Rabia</span></span><b>COLLISION</b><p>Estética cyborg.</p></div>
+      <div class="cara s aparece"><span class="hud"><span>Cara B</span><span>Vulnerabilidad</span></span><b>SURRENDER</b><p>Ciencia ficción de fantasía setentera.</p></div>
+    </div>
+    <div class="reproductor" id="reproductor" hidden>
+      <button class="boton" type="button" id="cargar-spotify"><svg aria-hidden="true"><use href="#i-play"/></svg>Escuchar aquí</button>
+    </div>
+  </section>
+
+  <!--
+    PRESS KIT · PLANTILLA
+    Cada apartado es un <article class="apartado" data-estado="listo|proceso">.
+    Para completar uno: cambia data-estado="proceso" por "listo", cambia el texto de .estado
+    y sustituye el <div class="hueco"> por el contenido. El medidor se actualiza solo.
+  -->
+  <section id="presskit" class="marco bloque-sec" data-escena="3">
+    <div class="cabeza aparece">
+      <div><p class="ceja">Para salas, festivales y medios</p><h2>Press kit</h2></div>
+      <div class="medidor"><p><b id="listos">4</b> de <b id="total">8</b> apartados listos</p><div class="barra"><i id="medidor" style="--p:.5"></i></div></div>
+    </div>
+    <div class="expediente">
+
+      <article class="apartado aparece" data-estado="listo">
+        <header><h3>Bio</h3><span class="estado">Listo</span></header>
+        <div class="lang" role="group" aria-label="Idioma de la bio"><button type="button" data-l="es" aria-pressed="true">Español</button><button type="button" data-l="en" aria-pressed="false">English</button></div>
+        <div class="bio" data-bio="es">
+          <p>Jan The Juniper es artista, productora y vocalista de Barcelona. Escribe, produce y canta su propia música, y la lleva al escenario en directos y sesiones como DJ.</p>
+          <p>Tras el EP <b>999</b> (2021), prepara <b>COLLISION / SURRENDER</b>, un EP de dos caras: <b>COLLISION</b> es la rabia, con una estética cyborg; <b>SURRENDER</b> es la vulnerabilidad, con una ciencia ficción de fantasía setentera.</p>
+        </div>
+        <div class="bio" data-bio="en" hidden>
+          <p>Jan The Juniper is an artist, producer and vocalist from Barcelona, Spain. Jan writes, produces and sings their own music, and takes it to the stage in live shows and DJ sets.</p>
+          <p>After the <b>999</b> EP (2021), Jan is preparing <b>COLLISION / SURRENDER</b>, a two-sided EP: <b>COLLISION</b> is rage, with a cyborg aesthetic; <b>SURRENDER</b> is vulnerability, with 70s fantasy sci-fi.</p>
+        </div>
+      </article>
+
+      <article class="apartado aparece" data-estado="listo">
+        <header><h3>Ficha</h3><span class="estado">Listo</span></header>
+        <dl class="ficha">
+          <div><dt>Origen</dt><dd>Barcelona</dd></div>
+          <div><dt>Perfil</dt><dd>Artista · productora · vocalista · DJ</dd></div>
+          <div><dt>Último EP</dt><dd>999 (2021)</dd></div>
+          <div><dt>Próximo</dt><dd>COLLISION / SURRENDER</dd></div>
+          <div><dt>Contacto</dt><dd>janthejuniper@gmail.com</dd></div>
+        </dl>
+      </article>
+
+      <article class="apartado todo aparece" data-estado="listo">
+        <header><h3>Fotos de prensa</h3><span class="estado">Listo</span></header>
+        <div class="fotos">
+          <a class="f1" href="https://janthejuniper-glitch.github.io/prensa/jan-the-juniper-01.jpg" download><img src="prensa/jan-the-juniper-01-web.jpg" alt="Jan The Juniper, foto de prensa 1" loading="lazy"><span>01 · HD</span></a>
+          <a class="f2" href="https://janthejuniper-glitch.github.io/prensa/jan-the-juniper-02.jpg" download><img src="prensa/jan-the-juniper-02-web.jpg" alt="Jan The Juniper, foto de prensa 2" loading="lazy"><span>02 · HD</span></a>
+          <a class="f3" href="https://janthejuniper-glitch.github.io/prensa/jan-the-juniper-03.jpg" download><img src="prensa/jan-the-juniper-03-web.jpg" alt="Jan The Juniper, foto de prensa 3" loading="lazy"><span>03 · HD</span></a>
+          <a class="f4" href="https://janthejuniper-glitch.github.io/prensa/jan-the-juniper-04.jpg" download><img src="prensa/jan-the-juniper-04-web.jpg" alt="Jan The Juniper, foto de prensa 4" loading="lazy"><span>04 · HD</span></a>
+          <a class="f5" href="https://janthejuniper-glitch.github.io/prensa/jan-the-juniper-05.jpg" download><img src="prensa/jan-the-juniper-05-web.jpg" alt="Jan The Juniper, foto de prensa 5" loading="lazy"><span>05 · HD</span></a>
+          <a class="f6" href="https://janthejuniper-glitch.github.io/prensa/jan-the-juniper-06.jpg" download><img src="prensa/jan-the-juniper-06-web.jpg" alt="Jan The Juniper, foto de prensa 6" loading="lazy"><span>06 · HD</span></a>
+          <a class="f7" href="https://janthejuniper-glitch.github.io/prensa/jan-the-juniper-07.jpg" download><img src="prensa/jan-the-juniper-07-web.jpg" alt="Jan The Juniper, foto de prensa 7" loading="lazy"><span>07 · HD</span></a>
+          <a class="f8" href="https://janthejuniper-glitch.github.io/prensa/jan-the-juniper-08.jpg" download><img src="prensa/jan-the-juniper-08-web.jpg" alt="Jan The Juniper, foto de prensa 8" loading="lazy"><span>08 · HD</span></a>
+        </div>
+        <div class="acciones">
+          <a class="boton pri" href="https://janthejuniper-glitch.github.io/prensa/jan-the-juniper-fotos.zip" download><svg aria-hidden="true"><use href="#i-bajar"/></svg>Todas en alta (ZIP)</a>
+          <a class="boton" href="https://janthejuniper-glitch.github.io/presskit.pdf" download><svg aria-hidden="true"><use href="#i-doc"/></svg>Press kit en PDF</a>
+        </div>
+      </article>
+
+      <article class="apartado aparece" data-estado="listo">
+        <header><h3>Vídeo</h3><span class="estado">Listo</span></header>
+        <a class="mini-video" href="https://youtu.be/3xvs9LE79GI"><img src="prensa/club-of-the-crazy-ones.jpg" alt="" loading="lazy" width="800" height="450"><span><b>Club Of The Crazy Ones</b><small>Videoclip oficial · YouTube</small></span></a>
+      </article>
+
+      <article class="apartado aparece" data-estado="proceso">
+        <header><h3>Directos y fechas</h3><span class="estado">En proceso</span></header>
+        <div class="hueco"><i></i><i></i><i></i><p>Próximas fechas y salas donde ha tocado.</p></div>
+      </article>
+
+      <article class="apartado aparece" data-estado="proceso">
+        <header><h3>Rider técnico</h3><span class="estado">En proceso</span></header>
+        <div class="hueco"><i></i><i></i><i></i><p>Necesidades de sonido y escenario, descargable en PDF.</p></div>
+      </article>
+
+      <article class="apartado aparece" data-estado="proceso">
+        <header><h3>Prensa y citas</h3><span class="estado">En proceso</span></header>
+        <div class="hueco"><i></i><i></i><i></i><p>Entrevistas, reseñas y frases de medios.</p></div>
+      </article>
+
+      <article class="apartado todo aparece" data-estado="proceso">
+        <header><h3>Logos y portadas</h3><span class="estado">En proceso</span></header>
+        <div class="hueco"><i></i><i></i><i></i><p>Logo en PNG y SVG, portadas de los lanzamientos en alta.</p></div>
+      </article>
+
+    </div>
+  </section>
+
+  <section id="booking" class="marco bloque-sec" data-escena="4">
+    <div class="contacto aparece">
+      <div><p class="ceja">Conciertos · DJ sets · colaboraciones · prensa</p><h2>Booking</h2></div>
+      <p class="correo" id="correo">janthejuniper@gmail.com</p>
+      <div class="acciones">
+        <a class="boton pri" href="mailto:janthejuniper@gmail.com?subject=Booking%20%C2%B7%20Jan%20The%20Juniper"><svg aria-hidden="true"><use href="#i-mail"/></svg>Escribir un email</a>
+        <button class="boton" type="button" data-copiar="janthejuniper@gmail.com"><svg aria-hidden="true"><use href="#i-copiar"/></svg><span>Copiar email</span></button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="marco capa">
+  <span>Barcelona · © 2026 Jan The Juniper</span>
+  <span><a href="https://janthejuniper-glitch.github.io/presskit.pdf">Press kit PDF</a> · <a href="https://janthejuniper-glitch.github.io/privacidad.html">Privacidad</a></span>
+</footer>
+
+<div class="lectura hud" aria-hidden="true"><span>Escena <b id="escena-n">1/5</b> · <b id="escena-nombre">Planeta</b></span><span>Pulso <b>152 BPM</b></span></div>
+
+<script>
+(function () {
+  // ── interfaz: progreso, menú activo, portada inclinable, foco en tarjetas, bio ES/EN, copiar, medidor, Spotify ──
+  var barra = document.getElementById('progreso')
+  function progreso() { var h = document.documentElement.scrollHeight - innerHeight; barra.style.transform = 'scaleX(' + (h > 0 ? Math.min(1, scrollY / h) : 0) + ')' }
+  addEventListener('scroll', progreso, { passive: true }); addEventListener('resize', progreso); progreso()
+
+  var p = document.getElementById('portada')
+  if (matchMedia('(hover: hover) and (pointer: fine)').matches && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    p.addEventListener('pointermove', function (e) {
+      var r = p.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5
+      p.style.setProperty('--ry', (x * 9).toFixed(2) + 'deg'); p.style.setProperty('--rx', (-y * 9).toFixed(2) + 'deg')
+    })
+    p.addEventListener('pointerleave', function () { p.style.setProperty('--ry', '0deg'); p.style.setProperty('--rx', '0deg') })
+  }
+
+  document.addEventListener('pointermove', function (e) {
+    var t = e.target.closest && e.target.closest('.tarjeta'); if (!t) return
+    var r = t.getBoundingClientRect(); t.style.setProperty('--mx', (e.clientX - r.left) + 'px'); t.style.setProperty('--my', (e.clientY - r.top) + 'px')
+  }, { passive: true })
+
+  document.querySelectorAll('.lang button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('.lang button').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)) })
+      document.querySelectorAll('[data-bio]').forEach(function (x) { x.hidden = x.dataset.bio !== b.dataset.l })
+    })
+  })
+
+  document.querySelectorAll('[data-copiar]').forEach(function (b) {
+    var etiqueta = b.querySelector('span'), original = etiqueta.textContent, reloj = 0
+    b.addEventListener('click', function () {
+      var hecho = function () { etiqueta.textContent = 'Copiado'; clearTimeout(reloj); reloj = setTimeout(function () { etiqueta.textContent = original }, 1800) }
+      var seleccionar = function () { var r = document.createRange(); r.selectNodeContents(document.getElementById('correo')); var s = getSelection(); s.removeAllRanges(); s.addRange(r) }
+      try { navigator.clipboard.writeText(b.dataset.copiar).then(hecho, seleccionar) } catch (e) { seleccionar() }
+    })
+  })
+
+  var apartados = document.querySelectorAll('.apartado'), listos = document.querySelectorAll('.apartado[data-estado="listo"]')
+  document.getElementById('listos').textContent = listos.length; document.getElementById('total').textContent = apartados.length
+  document.getElementById('medidor').style.setProperty('--p', (listos.length / apartados.length).toFixed(3))
+
+  // el reproductor de Spotify solo se ofrece en la web real (pesa ~1 MB; se carga solo si lo pides)
+  if (/github\.io$|^localhost$|^127\.|^$/.test(location.hostname)) {
+    var rep = document.getElementById('reproductor'); rep.hidden = false
+    document.getElementById('cargar-spotify').addEventListener('click', function () {
+      rep.innerHTML = '<iframe src="https://open.spotify.com/embed/artist/00nP0BkqQ96pB20X7KFaH3?utm_source=generator&theme=0" allow="encrypted-media; fullscreen; picture-in-picture" title="Jan The Juniper en Spotify"></iframe>'
+    })
+  }
+})()
+</script>
+<script>
+(function () {
+  // ── fondo 3D: una nube de partículas en WebGL puro que cambia de forma en cada sección ──
+  var ESCENAS = [
+    { nombre: 'Planeta', inc: .28 }, { nombre: 'Órbita', inc: .22 }, { nombre: 'Colisión', inc: .08 },
+    { nombre: 'Rejilla', inc: .52 }, { nombre: 'Galaxia', inc: .62 }
+  ]
+  var menu = document.querySelectorAll('.menu a')
+  var lienzo = document.getElementById('escena')
+  var quieto = matchMedia('(prefers-reduced-motion: reduce)').matches
+  var gl = null
+  try { gl = lienzo.getContext('webgl', { antialias: false, alpha: false, depth: false, powerPreference: 'low-power' }) } catch (e) {}
+
+  var VS = [
+    'attribute vec4 aS;',
+    'uniform float uT, uA, uB, uMix, uAgit, uEnergia, uAsp, uDpr, uEsc, uInc, uRotY;',
+    'uniform vec2 uRaton; uniform vec3 uClic;',
+    'varying vec3 vCol; varying float vA;',
+    'const float TAU = 6.2831853;',
+    'vec3 esfera(vec4 s){ float th=s.x*TAU; float cp=2.0*s.y-1.0; float sp=sqrt(max(0.0,1.0-cp*cp));',
+    '  float r = s.w>0.86 ? 1.1+0.45*s.z*s.z : 1.0+0.03*(s.z-0.5); return r*vec3(sp*cos(th),cp,sp*sin(th)); }',
+    'vec3 orbita(vec4 s){ if(s.w<0.3) return esfera(vec4(s.x,s.y,0.5,0.0))*0.52;',
+    '  float a=s.x*TAU+uT*0.05*(1.0+s.y); float R=1.0+0.85*pow(s.y,1.5); vec3 p=vec3(cos(a)*R,(s.z-0.5)*0.05,sin(a)*R);',
+    '  float c=cos(0.45), n=sin(0.45); return vec3(p.x*c-p.y*n, p.x*n+p.y*c, p.z); }',
+    'vec3 colision(vec4 s){ float l = s.w<0.5 ? -1.0 : 1.0; vec3 p = esfera(vec4(s.x,s.y,s.z,0.0))*0.7;',
+    '  p.x += l*(0.66+0.05*sin(uT*0.9)); if(l*p.x<0.04) p.x = l*0.04 + (p.x-l*0.04)*0.15; return p; }',
+    'vec3 rejilla(vec4 s){ float x; float z; if(s.w<0.5){ x=floor(s.x*40.0)/39.0; z=s.y; } else { x=s.x; z=floor(s.y*40.0)/39.0; }',
+    '  x=(x-0.5)*4.6; z=(z-0.5)*4.6;',
+    '  float y=0.2*sin(x*1.5+uT*0.5)*cos(z*1.3-uT*0.35)+0.07*sin(length(vec2(x,z))*3.2-uT*1.1); return vec3(x,y-0.2,z); }',
+    'vec3 galaxia(vec4 s){ float b=floor(s.w*3.0); float r=0.06+2.0*pow(s.x,0.75);',
+    '  float a=r*2.3+b*TAU/3.0+(s.y-0.5)*(0.8/(r+0.35))-uT*0.04; float h=(s.z-0.5)*0.2*(1.0-r/2.2); return vec3(cos(a)*r,h,sin(a)*r); }',
+    'vec3 forma(float id, vec4 s){ if(id<0.5) return esfera(s); if(id<1.5) return orbita(s); if(id<2.5) return colision(s); if(id<3.5) return rejilla(s); return galaxia(s); }',
+    // 0 = violeta SURRENDER, 1 = rosa COLLISION
+    'float tono(float id, vec4 s, vec3 p){ if(id<0.5) return s.w>0.86 ? 0.9 : smoothstep(-1.0,1.0,p.y)*0.55;',
+    '  if(id<1.5) return s.w<0.3 ? 0.85 : s.y*0.6; if(id<2.5) return s.w<0.5 ? 1.0 : 0.0;',
+    '  if(id<3.5) return smoothstep(-0.45,0.05,p.y); return 1.0-s.x; }',
+    'void main(){',
+    '  float m = clamp(uMix*1.5 - aS.z*0.5, 0.0, 1.0); m = m*m*(3.0-2.0*m);',
+    '  vec3 pa = forma(uA, aS); vec3 pb = forma(uB, aS); vec3 p = mix(pa, pb, m);',
+    '  p += sin(m*3.14159)*0.35*vec3(aS.y-0.5, aS.w-0.5, aS.x-0.5);',
+    '  float f = mix(tono(uA,aS,pa), tono(uB,aS,pb), m);',
+    '  p += 0.012*vec3(sin(uT*0.7+aS.y*30.0), sin(uT*0.6+aS.x*30.0), sin(uT*0.8+aS.w*30.0));',
+    '  p += uAgit*0.07*vec3(sin(uT*7.0+aS.x*50.0), sin(uT*6.0+aS.y*50.0), sin(uT*8.0+aS.z*50.0));',
+    // latido a 152 BPM: 152/60 vueltas por segundo
+    '  float lat = pow(0.5+0.5*cos(uT*15.9174), 14.0);',
+    '  p *= uEsc*(1.0+0.012*lat);',
+    '  float cy=cos(uRotY), sy=sin(uRotY); p = vec3(p.x*cy+p.z*sy, p.y, -p.x*sy+p.z*cy);',
+    '  float cx=cos(uInc), sx=sin(uInc); p = vec3(p.x, p.y*cx-p.z*sx, p.y*sx+p.z*cx);',
+    '  float w = 4.4 - p.z;',
+    '  vec2 ndc = vec2(p.x*2.0/uAsp, p.y*2.0)/w;',
+    '  vec2 dv = ndc - uRaton; dv.x *= uAsp; float d = length(dv)+0.0001; vec2 dir = dv/d;',
+    '  float luz = exp(-d*d*9.0);',
+    '  ndc += vec2(dir.x/uAsp, dir.y)*exp(-d*d*30.0)*(0.05+0.05*uEnergia);',
+    '  float e = uT - uClic.z;',
+    '  if(e>0.0 && e<1.6){ vec2 cv = ndc-uClic.xy; cv.x*=uAsp; float cd=length(cv)+0.0001; float k=exp(-abs(cd-e*1.4)*12.0)*(1.0-e/1.6);',
+    '    ndc += vec2(cv.x/uAsp, cv.y)/cd*k*0.05; luz += k*1.5; }',
+    '  gl_Position = vec4(ndc, 0.0, 1.0);',
+    '  gl_PointSize = uDpr*(1.3+1.6*aS.w)*(4.4/w)*(1.0+0.6*luz);',
+    '  vec3 violeta = vec3(0.624,0.549,1.0); vec3 rosa = vec3(0.878,0.482,1.0); vec3 blanco = vec3(0.96,0.94,0.99);',
+    '  vCol = mix(mix(violeta, rosa, f), blanco, clamp(luz*0.7+lat*0.08, 0.0, 1.0));',
+    '  vA = (0.22+0.3*aS.w)*(0.75+0.5*luz+0.3*uEnergia+0.15*lat);',
+    '}'
+  ].join('\n')
+  var FS = [
+    'precision mediump float;',
+    'varying vec3 vCol; varying float vA;',
+    'void main(){ vec2 c = gl_PointCoord - 0.5; float a = exp(-dot(c,c)*18.0)*vA; gl_FragColor = vec4(vCol*a, 1.0); }'
+  ].join('\n')
+
+  function compilar(tipo, src) {
+    var s = gl.createShader(tipo); gl.shaderSource(s, src); gl.compileShader(s)
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.warn('[escena]', gl.getShaderInfoLog(s)); return null }
+    return s
+  }
+  var prog = null
+  if (gl) {
+    var vs = compilar(gl.VERTEX_SHADER, VS), fs = compilar(gl.FRAGMENT_SHADER, FS)
+    if (vs && fs) {
+      prog = gl.createProgram(); gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog)
+      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { console.warn('[escena]', gl.getProgramInfoLog(prog)); prog = null }
+    }
+  }
+
+  // estado compartido con el observador de secciones (funciona también sin 3D: actualiza menú y lectura)
+  var A = 0, B = 0, mezcla = 1, inc = ESCENAS[0].inc, pintarQuieto = null
+  function irA(i) {
+    menu.forEach(function (a, k) { a.classList.toggle('activo', k === i - 1) })
+    document.getElementById('escena-n').textContent = (i + 1) + '/' + ESCENAS.length
+    document.getElementById('escena-nombre').textContent = ESCENAS[i].nombre
+    if (i === B) return
+    if (quieto) { A = B = i; mezcla = 1; if (pintarQuieto) pintarQuieto(); return }
+    if (mezcla >= .5) { A = B; mezcla = 0 }
+    B = i
+  }
+  // escena activa: la última sección cuyo borde superior ya pasó del 55 % de la pantalla; al final de la página, la última
+  var secciones = Array.prototype.slice.call(document.querySelectorAll('[data-escena]')), pendiente = false
+  function elegir() {
+    pendiente = false
+    var activa = secciones[0]
+    if (scrollY + innerHeight >= document.documentElement.scrollHeight - 2) activa = secciones[secciones.length - 1]
+    else secciones.forEach(function (s) { if (s.getBoundingClientRect().top <= innerHeight * .55) activa = s })
+    irA(+activa.dataset.escena)
+  }
+  addEventListener('scroll', function () { if (!pendiente) { pendiente = true; requestAnimationFrame(elegir) } }, { passive: true })
+  addEventListener('resize', elegir)
+  elegir()
+
+  if (!prog) { document.documentElement.classList.add('sin-3d'); return }
+
+  var movil = matchMedia('(pointer: coarse)').matches || innerWidth < 700
+  var N = movil ? 7000 : 14000, dibujar = N
+  var semillas = new Float32Array(N * 4)
+  for (var i = 0; i < semillas.length; i++) semillas[i] = Math.random()
+  gl.useProgram(prog)
+  var buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, semillas, gl.STATIC_DRAW)
+  var aS = gl.getAttribLocation(prog, 'aS'); gl.enableVertexAttribArray(aS); gl.vertexAttribPointer(aS, 4, gl.FLOAT, false, 0, 0)
+  var U = {}
+  'uT uA uB uMix uAgit uEnergia uAsp uDpr uEsc uInc uRotY uRaton uClic'.split(' ').forEach(function (n) { U[n] = gl.getUniformLocation(prog, n) })
+  gl.disable(gl.DEPTH_TEST); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE)
+  gl.clearColor(11 / 255, 8 / 255, 18 / 255, 1)
+
+  var W = 1, H = 1, dpr = 1, esc = 1
+  function medir() {
+    dpr = Math.min(devicePixelRatio || 1, movil ? 1.5 : 1.75); W = innerWidth; H = innerHeight
+    lienzo.width = Math.round(W * dpr); lienzo.height = Math.round(H * dpr); gl.viewport(0, 0, lienzo.width, lienzo.height)
+    var asp = W / H; esc = asp < 1 ? .55 + .4 * asp : Math.min(1.15, .85 + .15 * asp)
+    if (pintarQuieto) pintarQuieto()
+  }
+  addEventListener('resize', medir)
+
+  // puntero: ratón o dedo; sin tocar nada (móvil), pasea solo despacio
+  var raton = { x: 0, y: 0, tx: 0, ty: 0, activo: false, ultimo: 0 }, clic = [0, 0, -10], energia = 0, energiaObj = 0
+  function aNdc(e) { return [e.clientX / W * 2 - 1, 1 - e.clientY / H * 2] }
+  addEventListener('pointermove', function (e) { var n = aNdc(e); raton.tx = n[0]; raton.ty = n[1]; raton.activo = true; raton.ultimo = performance.now() }, { passive: true })
+  addEventListener('pointerdown', function (e) { var n = aNdc(e); raton.tx = n[0]; raton.ty = n[1]; raton.activo = true; raton.ultimo = performance.now(); clic = [n[0], n[1], performance.now() / 1000] }, { passive: true })
+  document.addEventListener('pointerover', function (e) { energiaObj = e.target.closest && e.target.closest('.tarjeta, .boton, .redes a, .cara') ? 1 : 0 }, { passive: true })
+
+  var ultimoY = scrollY, agit = 0, ultimoT = performance.now(), lento = 0
+  function pintar(ahora) {
+    var t = ahora / 1000, dt = Math.min(.1, (ahora - ultimoT) / 1000); ultimoT = ahora
+    if (!raton.activo || ahora - raton.ultimo > 4000) { raton.tx = .55 * Math.sin(t * .13); raton.ty = .45 * Math.sin(t * .09 + 1.3) }
+    raton.x += (raton.tx - raton.x) * .08; raton.y += (raton.ty - raton.y) * .08
+    var v = Math.abs(scrollY - ultimoY) / Math.max(dt, .001); ultimoY = scrollY
+    agit += (Math.min(1, v / 2500) - agit) * .08
+    energia += (energiaObj - energia) * .06
+    if (mezcla < 1) mezcla = Math.min(1, mezcla + dt / 1.5)
+    inc += (ESCENAS[B].inc - inc) * .04
+    // calidad adaptativa: si van lentos los fotogramas, dibuja menos partículas
+    if (dt > .028) { if (++lento > 45) { dibujar = Math.max(N * .35 | 0, dibujar * .8 | 0); lento = 0 } } else lento = Math.max(0, lento - 1)
+    gl.uniform1f(U.uT, t); gl.uniform1f(U.uA, A); gl.uniform1f(U.uB, B); gl.uniform1f(U.uMix, mezcla)
+    gl.uniform1f(U.uAgit, agit); gl.uniform1f(U.uEnergia, energia); gl.uniform1f(U.uAsp, W / H); gl.uniform1f(U.uDpr, dpr)
+    gl.uniform1f(U.uEsc, esc); gl.uniform1f(U.uInc, inc + raton.y * .18); gl.uniform1f(U.uRotY, t * .06 + raton.x * .5)
+    gl.uniform2f(U.uRaton, raton.x, raton.y); gl.uniform3f(U.uClic, clic[0], clic[1], clic[2])
+    gl.clear(gl.COLOR_BUFFER_BIT); gl.drawArrays(gl.POINTS, 0, dibujar)
+  }
+
+  if (quieto) {
+    // sin animación: una imagen fija por sección
+    pintarQuieto = function () { inc = ESCENAS[B].inc; raton.activo = true; raton.ultimo = 1e12; ultimoT = 0; pintar(0) }
+    medir(); pintarQuieto(); return
+  }
+  medir()
+  var id = 0
+  function bucle(ahora) { pintar(ahora); id = requestAnimationFrame(bucle) }
+  id = requestAnimationFrame(bucle)
+  document.addEventListener('visibilitychange', function () { cancelAnimationFrame(id); if (!document.hidden) { ultimoT = performance.now(); id = requestAnimationFrame(bucle) } })
+  lienzo.addEventListener('webglcontextlost', function (e) { e.preventDefault(); cancelAnimationFrame(id); document.documentElement.classList.add('sin-3d') })
+})()
+</script>
+<!--artifact:fin-->
+</body>
+</html>
